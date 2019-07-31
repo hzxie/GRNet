@@ -61,7 +61,7 @@ __C.PAVI.TAGS                                  = []
 #
 __C.TRAIN                                      = edict()
 __C.TRAIN.BATCH_SIZE                           = 16
-__C.TRAIN.N_EPOCHS                             = 250
+__C.TRAIN.N_INTERATIONS                        = 250
 __C.TRAIN.POLICY                               = 'adam'     # available options: sgd, adam
 __C.TRAIN.LEARNING_RATE                        = 1e-4
 __C.TRAIN.LR_MILESTONES                        = [150]
