@@ -46,23 +46,22 @@ class BatchLoader(object):
         self.shuffle = True if subset == 'train' else False
         self.transformers = utils.data_transforms.Compose(transforms)
         self.mc_client = mc_client
-        self.index = 0
+        self.cursor = 0
         self.count = len(self.file_list)
-        self._reset()
 
     def _reset(self):
-        self.index = 0
+        self.cursor = 0
 
         if self.shuffle:
-            self.file_list = random.shuffle(self.file_list)
+            random.shuffle(self.file_list)
 
     def next(self):
-        if self.index >= self.count:
+        if self.cursor >= self.count:
             self._reset()
 
-        file = self.file_list[self.index]
+        file = self.file_list[self.cursor]
         raw_data = {}
-        rand_idx = random.randint(0, cfg['n_renderings'] - 1) if self.shuffle else 0
+        rand_idx = random.randint(0, self.cfg['n_renderings'] - 1) if self.shuffle else 0
         for ri in self.cfg['required_items']:
             file_path = file['%s_path' % ri]
             if type(file_path) == list:
@@ -73,14 +72,15 @@ class BatchLoader(object):
         if self.transformers is not None:
             data = self.transformers(raw_data)
 
-        self.index += 1
+        self.cursor += 1
         return data
 
 
 class ShapeNetDataset(object):
-    def __init__(self, cfg, subset):
+    def __init__(self, cfg, subset, verbose=False):
         self.cfg = cfg
         self.subset = subset
+        self.verbose = verbose
         self.file_list = self._get_file_list(cfg, subset)
 
     def _get_file_list(self, cfg, subset):
@@ -90,7 +90,10 @@ class ShapeNetDataset(object):
             data_cateogries = json.loads(f.read())
 
         for dc in data_cateogries:
-            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
+            if self.verbose:
+                logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' %
+                             (dc['taxonomy_id'], dc['taxonomy_name']))
+
             samples = dc[subset]
             for s in tqdm(samples, leave=False):
                 file_list.append({
@@ -106,7 +109,9 @@ class ShapeNetDataset(object):
                     cfg.DATASETS.SHAPENET.POINTS_PATH % (dc['taxonomy_id'], s),
                 })
 
-        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
+        if self.verbose:
+            logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
+
         return file_list
 
     def get_n_itrs(self):
@@ -125,7 +130,7 @@ class ShapeNetDataLayer(caffe.Layer):
         self.batch_size = self.cfg.TRAIN.BATCH_SIZE if self.subset == 'train' else 1
 
         # Get file list
-        self.dataset = ShapeNetDataset(self.cfg, self.subset)
+        self.dataset = ShapeNetDataset(self.cfg, self.subset, verbose=True)
         self.file_list = self.dataset.file_list
 
         # Set up MemCached if available

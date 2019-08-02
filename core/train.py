@@ -126,4 +126,12 @@ def train_net(cfg):
 
     # Create the solvers
     solver = caffe.get_solver(get_solver(cfg, train_net, val_net))
-    solver.solve()
+
+    # Training the network
+    for epoch_idx in range(cfg.TRAIN.N_EPOCHS):
+        for batch_idx in range(cfg.TRAIN.N_ITERS):
+            solver.step(1)
+            logging.info('[Epoch %d/%d][Batch %d/%d]' %
+                         (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx, cfg.TEST.TEST_FREQ_ITER))
+
+    # Testing the network

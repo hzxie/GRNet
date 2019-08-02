@@ -3,15 +3,20 @@
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
+# Disable Caffe Output
+import os
+# os.environ['GLOG_minloglevel'] = '2'
+
 import argparse
 import caffe
 import cv2
 import logging
 import matplotlib
-import os
 import sys
+
 # Fix problem: no $DISPLAY environment variable
 matplotlib.use('Agg')
+
 # Fix deadlock in DataLoader
 cv2.setNumThreads(0)
 
@@ -64,8 +69,5 @@ if __name__ == '__main__':
     if sys.version_info < (3, 0):
         raise Exception("Please follow the installation instruction on https://github.com/hzxie/RPLNet")
 
-    logging.basicConfig(
-        format='%(levelname)s %(asctime)s.%(msecs)03d %(process)d %(filename)s:%(lineno)s] %(message)s',
-        datefmt='%m%d %H:%M:%S',
-        level=logging.DEBUG)
+    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', level=logging.DEBUG)
     main()

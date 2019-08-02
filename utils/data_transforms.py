@@ -22,7 +22,7 @@ class Compose(object):
             rnd_value = random.random()    # Random values for random crop and random flip
             for k, v in data.items():
                 if k in objects and k in data:
-                    if transform in [RandomCrop, RandomFlip]:
+                    if transform.__class__ in [RandomCrop, RandomFlip]:
                         data[k] = transform(v, rnd_value)
                     else:
                         data[k] = transform(v)
@@ -90,9 +90,9 @@ class RandomCrop(object):
 
     def __call__(self, img, rnd_value):
         img_w, img_h, _ = img.shape
-        x_left = (img_w - self.crop_size_w) * rnd_value()
+        x_left = (img_w - self.crop_size_w) * rnd_value
         x_right = x_left + self.crop_size_w
-        y_top = (img_h - self.crop_size_h) * rnd_value()
+        y_top = (img_h - self.crop_size_h) * rnd_value
         y_bottom = y_top + self.crop_size_h
 
         # Crop the image
@@ -131,8 +131,7 @@ class RandomBackground(object):
             return img
 
         r, g, b = [
-            np.random.randint(self.random_bg_color_range[i][0], self.random_bg_color_range[i][1] + 1)
-            for i in range(3)
+            np.random.randint(self.random_bg_color_range[i][0], self.random_bg_color_range[i][1] + 1) for i in range(3)
         ]
         alpha = (np.expand_dims(img[:, :, 3], axis=2) == 0).astype(np.float32)
         img = img[:, :, :3]
