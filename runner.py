@@ -63,7 +63,9 @@ if __name__ == '__main__':
     # Check python version
     if sys.version_info < (3, 0):
         raise Exception("Please follow the installation instruction on https://github.com/hzxie/RPLNet")
-    # Set up logging
-    logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', level=logging.INFO)
-    # Execute main function
+
+    logging.basicConfig(
+        format='%(levelname)s %(asctime)s.%(msecs)03d %(process)d %(filename)s:%(lineno)s] %(message)s',
+        datefmt='%m%d %H:%M:%S',
+        level=logging.DEBUG)
     main()

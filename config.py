@@ -17,6 +17,7 @@ __C.DATASETS.SHAPENET                          = edict()
 __C.DATASETS.SHAPENET.CATEGORY_FILE_PATH       = './datasets/ShapeNet.json'
 __C.DATASETS.SHAPENET.N_RENDERINGS             = 24
 __C.DATASETS.SHAPENET.N_POINTS                 = 16384
+__C.DATASETS.SHAPENET.K                        = []
 __C.DATASETS.SHAPENET.RGB_IMG_PATH             = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/render_%02d_l.png'
 __C.DATASETS.SHAPENET.DEPTH_IMG_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/depth_%02d_l.exr'
 __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetPoints/%s/%s.npy'
@@ -26,17 +27,15 @@ __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Data
 # Constants
 #
 __C.CONST                                      = edict()
-__C.CONST.DEVICE                               = '0'                       # For multi-gpus: 0, 1, 2, 3
-__C.CONST.N_WORKERS                            = 4
+__C.CONST.DEVICE                               = 0
 __C.CONST.DATASET                              = 'ShapeNet'
 __C.CONST.DATASET_MEAN                         = [0.5, 0.5, 0.5]
 __C.CONST.DATASET_STD                          = [0.5, 0.5, 0.5]
-__C.CONST.RANDOM_BG_COLOR                      = [[225, 255], [225, 255], [225, 255]]
 __C.CONST.IMG_W                                = 224
 __C.CONST.IMG_H                                = 224
 __C.CONST.CROP_IMG_W                           = 210
 __C.CONST.CROP_IMG_H                           = 210
-__C.CONST.WEIGHTS                              = None
+__C.CONST.N_POINTS                             = 2048
 
 #
 # Directories
@@ -66,8 +65,10 @@ __C.TRAIN.LR_MILESTONE_EPOCH                   = 150
 __C.TRAIN.GAMMA                                = .5
 __C.TRAIN.BETAS                                = (.9, .999)
 __C.TRAIN.WEIGHT_DECAY                         = 5e-4
+__C.TRAIN.RANDOM_BG_COLOR                      = [[225, 255], [225, 255], [225, 255]]
 
 #
 # Test
 #
 __C.TEST                                       = edict()
+__C.TEST.RANDOM_BG_COLOR                       = [[240, 240], [240, 240], [240, 240]]
