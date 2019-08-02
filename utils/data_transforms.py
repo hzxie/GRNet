@@ -77,6 +77,7 @@ class CenterCrop(object):
 
         # Crop the image
         img = cv2.resize(img[int(y_top):int(y_bottom), int(x_left):int(x_right)], (self.img_size_w, self.img_size_h))
+        img = img[..., np.newaxis] if len(img.shape) == 2 else img
 
         return img
 
@@ -97,6 +98,7 @@ class RandomCrop(object):
 
         # Crop the image
         img = cv2.resize(img[int(y_top):int(y_bottom), int(x_left):int(x_right)], (self.img_size_w, self.img_size_h))
+        img = img[..., np.newaxis] if len(img.shape) == 2 else img
 
         return img
 
