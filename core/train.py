@@ -10,22 +10,81 @@ import utils.data_loaders
 
 from datetime import datetime
 
-from models.rplnet import create_rplnet
+from models.rplnet import get_rplnet
 from utils.solvers import get_solver
 
 
 def train_net(cfg):
     train_dataset = utils.data_loaders.get_dataset(cfg.CONST.DATASET, cfg, 'train')
     val_dataset = utils.data_loaders.get_dataset(cfg.CONST.DATASET, cfg, 'val')
-    train_data_transforms = []
-    val_data_transforms = []
+    train_data_transforms = [{
+        'callback': 'RandomCrop',
+        'parameters': {
+            'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
+            'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
+        },
+        'objects': ['rgb_img', 'depth_img']
+    }, {
+        'callback': 'RandomFlip',
+        'parameters': None,
+        'objects': ['rgb_img', 'depth_img']
+    }, {
+        'callback': 'RandomPermuteRGB',
+        'parameters': None,
+        'objects': ['rgb_img']
+    }, {
+        'callback': 'RandomBackground',
+        'parameters': {
+            'bg_color': cfg.TRAIN.RANDOM_BG_COLOR
+        },
+        'objects': ['rgb_img']
+    }, {
+        'callback': 'Normalize',
+        'parameters': {
+            'mean': cfg.CONST.DATASET_MEAN,
+            'std': cfg.CONST.DATASET_STD
+        },
+        'objects': ['rgb_img']
+    }, {
+        'callback': 'ToTensor',
+        'parameters': None,
+        'objects': ['rgb_img', 'depth_img', 'ptcloud']
+    }]
+    val_data_transforms = [{
+        'callback': 'CenterCrop',
+        'parameters': {
+            'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
+            'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
+        },
+        'objects': ['rgb_img', 'depth_img']
+    }, {
+        'callback': 'RandomBackground',
+        'parameters': {
+            'bg_color': cfg.TEST.RANDOM_BG_COLOR
+        },
+        'objects': ['rgb_img']
+    }, {
+        'callback': 'Normalize',
+        'parameters': {
+            'mean': cfg.CONST.DATASET_MEAN,
+            'std': cfg.CONST.DATASET_STD
+        },
+        'objects': ['rgb_img']
+    }, {
+        'callback': 'ToTensor',
+        'parameters': None,
+        'objects': ['rgb_img', 'depth_img', 'ptcloud']
+    }]
     train_data_layer = caffe.layers.Python(name='data',
                                            include={'phase': caffe.TRAIN},
                                            ntop=3,
                                            python_param={
-                                               'module': 'utils.data_loaders',
-                                               'layer': utils.data_loaders.get_data_layer(cfg.CONST.DATASET),
-                                               'param_str': repr({
+                                               'module':
+                                               'utils.data_loaders',
+                                               'layer':
+                                               utils.data_loaders.get_data_layer(cfg.CONST.DATASET),
+                                               'param_str':
+                                               repr({
                                                    'cfg': cfg,
                                                    'subset': 'train',
                                                    'transforms': train_data_transforms
@@ -35,9 +94,12 @@ def train_net(cfg):
                                          include={'phase': caffe.TEST},
                                          ntop=3,
                                          python_param={
-                                             'module': 'utils.data_loaders',
-                                             'layer': utils.data_loaders.get_data_layer(cfg.CONST.DATASET),
-                                             'param_str': repr({
+                                             'module':
+                                             'utils.data_loaders',
+                                             'layer':
+                                             utils.data_loaders.get_data_layer(cfg.CONST.DATASET),
+                                             'param_str':
+                                             repr({
                                                  'cfg': cfg,
                                                  'subset': 'val',
                                                  'transforms': val_data_transforms
@@ -52,8 +114,8 @@ def train_net(cfg):
         os.makedirs(cfg.DIR.CHECKPOINTS)
 
     # Create the networks
-    train_net = create_rplnet(cfg, train_data_layer, 'train')
-    val_net = create_rplnet(cfg, val_data_layer, 'val')
+    train_net = get_rplnet(cfg, train_data_layer, 'train')
+    val_net = get_rplnet(cfg, val_data_layer, 'val')
 
     # Set up the iters for solvers
     cfg.TEST.TEST_ITER = val_dataset.get_n_itrs()    # Test all samples during testing, batch size = 1
