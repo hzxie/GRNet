@@ -76,11 +76,23 @@ class BatchLoader(object):
         return data
 
 
-class ShapeNetDataset(object):
-    def __init__(self, cfg, subset, verbose=False):
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        subset = args[1]
+        instance_key = '%s/%s' % (cls.__name__, subset)
+
+        if instance_key not in cls._instances:
+            cls._instances[instance_key] = super(Singleton, cls).__call__(*args, **kwargs)
+
+        return cls._instances[instance_key]
+
+
+class ShapeNetDataset(metaclass=Singleton):
+    def __init__(self, cfg, subset):
         self.cfg = cfg
         self.subset = subset
-        self.verbose = verbose
         self.file_list = self._get_file_list(cfg, subset)
 
     def _get_file_list(self, cfg, subset):
@@ -90,10 +102,7 @@ class ShapeNetDataset(object):
             data_cateogries = json.loads(f.read())
 
         for dc in data_cateogries:
-            if self.verbose:
-                logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' %
-                             (dc['taxonomy_id'], dc['taxonomy_name']))
-
+            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
             samples = dc[subset]
             for s in tqdm(samples, leave=False):
                 file_list.append({
@@ -109,9 +118,7 @@ class ShapeNetDataset(object):
                     cfg.DATASETS.SHAPENET.POINTS_PATH % (dc['taxonomy_id'], s),
                 })
 
-        if self.verbose:
-            logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
-
+        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
         return file_list
 
     def get_n_itrs(self):
@@ -130,7 +137,7 @@ class ShapeNetDataLayer(caffe.Layer):
         self.batch_size = self.cfg.TRAIN.BATCH_SIZE if self.subset == 'train' else 1
 
         # Get file list
-        self.dataset = ShapeNetDataset(self.cfg, self.subset, verbose=True)
+        self.dataset = ShapeNetDataset(self.cfg, self.subset)
         self.file_list = self.dataset.file_list
 
         # Set up MemCached if available
