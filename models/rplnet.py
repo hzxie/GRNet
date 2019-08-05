@@ -84,9 +84,8 @@ def get_rplnet(cfg, data_layer, phase='train', data_transforms=None):
                                stride=2,
                                weight_filler=dict(type='xavier'))
     net.relu6e = L.ReLU(net.conv6e, in_place=True)
-    net.fc7a = L.InnerProduct(net.relu6e, num_output=2048, weight_filler=dict(type='gaussian', std=0.01))
-    net.relu7a = L.ReLU(net.fc7a, in_place=True)
-    net.fc7b = L.InnerProduct(net.relu7a, num_output=2048, weight_filler=dict(type='gaussian', std=0.01))
+    net.fc7 = L.InnerProduct(net.relu6e, num_output=2048, weight_filler=dict(type='gaussian', std=0.01))
+    net.relu7 = L.ReLU(net.fc7, in_place=True)
 
     net.deconv1a = L.Deconvolution(net.relu6e,
                                    convolution_param=dict(kernel_size=5,
@@ -198,8 +197,10 @@ def get_rplnet(cfg, data_layer, phase='train', data_transforms=None):
                                pad=2,
                                stride=2,
                                weight_filler=dict(type='xavier'))
-    net.fc13 = L.InnerProduct(net.conv12, num_output=2048, weight_filler=dict(type='gaussian', std=0.01))
-    net.fc14a = L.InnerProduct(net.fc13, num_output=1024, weight_filler=dict(type='gaussian', std=0.01))
+    net.fc13a = L.InnerProduct(net.relu7, num_output=2048, weight_filler=dict(type='gaussian', std=0.01))
+    net.fc13b = L.InnerProduct(net.conv12, num_output=2048, weight_filler=dict(type='gaussian', std=0.01))
+    net.sum13b = L.Eltwise(*[net.fc13a, net.fc13b])
+    net.fc14a = L.InnerProduct(net.sum13b, num_output=1024, weight_filler=dict(type='gaussian', std=0.01))
     net.relu14a = L.ReLU(net.fc14a, in_place=True)
     net.fc14b = L.InnerProduct(net.relu14a, num_output=768, weight_filler=dict(type='gaussian', std=0.01))
     net.reshape14 = L.Reshape(net.fc14b, reshape_param={'shape': {'dim': [n, 256, 3]}})
