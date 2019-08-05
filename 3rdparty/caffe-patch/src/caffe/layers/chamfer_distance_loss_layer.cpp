@@ -58,7 +58,7 @@ void ChamferDistanceLossLayer<Dtype>::Forward_cpu(
         Dtype dist = dx * dx + dy * dy + dz * dz;
         if (dist < _min_distance) {
           _min_distance               = dist;
-          indexes1[i * n_points1 + j] = i * n_points2 + k;
+          indexes1[i * n_points1 + j] = k;
         }
       }
       m_dist1[i * n_points1 + j] += _min_distance / n_points1;
@@ -79,7 +79,7 @@ void ChamferDistanceLossLayer<Dtype>::Forward_cpu(
         Dtype dist = dx * dx + dy * dy + dz * dz;
         if (dist < _min_distance) {
           _min_distance               = dist;
-          indexes2[i * n_points2 + j] = i * n_points1 + k;
+          indexes2[i * n_points2 + j] = k;
         }
       }
       m_dist2[i * n_points2 + j] += _min_distance / n_points2;
@@ -96,7 +96,57 @@ template <typename Dtype>
 void ChamferDistanceLossLayer<Dtype>::Backward_cpu(
   const vector<Blob<Dtype>*>& top,
   const vector<bool>& propagate_down,
-  const vector<Blob<Dtype>*>& bottom) {}
+  const vector<Blob<Dtype>*>& bottom) {
+  const int* indexes1 = indexes1_.cpu_data();
+  const int* indexes2 = indexes2_.cpu_data();
+
+  const int num       = bottom[0]->num();
+  const int n_points1 = bottom[0]->channels();
+  const int n_points2 = bottom[1]->channels();
+  Dtype grad_dist1    = top[0]->cpu_diff()[0] / n_points1 / num;
+  Dtype grad_dist2    = top[0]->cpu_diff()[0] / n_points2 / num;
+
+  Dtype* diff1 = bottom[0]->mutable_cpu_diff();
+  Dtype* diff2 = bottom[1]->mutable_cpu_diff();
+  for (int i = 0; i < num; ++i) {
+    for (int j = 0; j < n_points1; ++j) {
+      int k      = indexes1[i * n_points1 + j];
+      Dtype x1   = bottom[0]->data_at(i, j, 0, 0);
+      Dtype y1   = bottom[0]->data_at(i, j, 1, 0);
+      Dtype z1   = bottom[0]->data_at(i, j, 2, 0);
+      Dtype x2   = bottom[1]->data_at(i, k, 0, 0);
+      Dtype y2   = bottom[1]->data_at(i, k, 1, 0);
+      Dtype z2   = bottom[1]->data_at(i, k, 2, 0);
+      Dtype grad = grad_dist1 * 2;
+
+      diff1[(i * n_points1 + j) * 3 + 0] += grad * (x1 - x2);
+      diff1[(i * n_points1 + j) * 3 + 1] += grad * (y1 - y2);
+      diff1[(i * n_points1 + j) * 3 + 2] += grad * (z1 - z2);
+      diff2[(i * n_points2 + k) * 3 + 0] += grad * (x2 - x1);
+      diff2[(i * n_points2 + k) * 3 + 1] += grad * (y2 - y1);
+      diff2[(i * n_points2 + k) * 3 + 2] += grad * (z2 - z1);
+    }
+  }
+
+  for (int i = 0; i < num; ++i) {
+    for (int j = 0; j < n_points2; ++j) {
+      int k      = indexes2[i * n_points2 + j];
+      Dtype x1   = bottom[1]->data_at(i, j, 0, 0);
+      Dtype y1   = bottom[1]->data_at(i, j, 1, 0);
+      Dtype z1   = bottom[1]->data_at(i, j, 2, 0);
+      Dtype x2   = bottom[0]->data_at(i, k, 0, 0);
+      Dtype y2   = bottom[0]->data_at(i, k, 1, 0);
+      Dtype z2   = bottom[0]->data_at(i, k, 2, 0);
+      Dtype grad = grad_dist2 * 2;
+
+      diff2[(i * n_points2 + j) * 3 + 0] += grad * (x1 - x2);
+      diff2[(i * n_points2 + j) * 3 + 1] += grad * (y1 - y2);
+      diff2[(i * n_points2 + j) * 3 + 2] += grad * (z1 - z2);
+      diff1[(i * n_points1 + k) * 3 + 0] += grad * (x2 - x1);
+      diff1[(i * n_points1 + k) * 3 + 1] += grad * (y2 - y1);
+    }
+  }
+}
 
 #ifdef CPU_ONLY
 STUB_GPU(ChamferDistanceLossLayer);

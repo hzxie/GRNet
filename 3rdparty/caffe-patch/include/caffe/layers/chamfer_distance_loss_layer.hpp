@@ -27,6 +27,14 @@ class ChamferDistanceLossLayer : public LossLayer<Dtype> {
                        const vector<Blob<Dtype>*>& top);
 
   virtual inline const char* type() const { return "ChamferDistanceLoss"; }
+  /**
+   * Unlike most loss layers, in the ChamferDistanceLossLayer we can
+   * backpropagate to both inputs -- override to return true and always allow
+   * force_backward.
+   */
+  virtual inline bool AllowForceBackward(const int bottom_index) const {
+    return true;
+  }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
