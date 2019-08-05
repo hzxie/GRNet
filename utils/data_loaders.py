@@ -155,7 +155,7 @@ class ShapeNetDataLayer(caffe.Layer):
         # Reshape Tops
         top[0].reshape(self.batch_size, 3, self.cfg.CONST.IMG_H, self.cfg.CONST.IMG_W)
         top[1].reshape(self.batch_size, 1, self.cfg.CONST.IMG_H, self.cfg.CONST.IMG_W)
-        top[2].reshape(self.batch_size, 3, self.cfg.DATASETS.SHAPENET.N_POINTS)
+        top[2].reshape(self.batch_size, self.cfg.DATASETS.SHAPENET.N_POINTS, 3)
 
     def forward(self, bottom, top):
         """Load data."""
