@@ -38,7 +38,7 @@ class ToTensor(object):
         tensor = None
         shape = arr.shape
         if len(shape) == 2:    # Point Clouds
-            tensor = arr.transpose(1, 0)
+            tensor = arr
         elif len(shape) == 3:    # RGB/Depth Images
             tensor = arr.transpose(2, 0, 1)
         else:
