@@ -118,14 +118,14 @@ TYPED_TEST(ChamferDistanceLossLayerTest, TestForward) {
   EXPECT_NEAR(cd_loss, loss, 1e-5);
 }
 
-// TYPED_TEST(ChamferDistanceLossLayerTest, TestGradient) {
-//   typedef typename TypeParam::Dtype Dtype;
-//   LayerParameter layer_param;
-//   ChamferDistanceLossLayer<Dtype> layer(layer_param);
-//   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-//   GradientChecker<Dtype> checker(1e-2, 1e-2, 1701);
-//   checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
-//                                   this->blob_top_vec_, 0);
-// }
+TYPED_TEST(ChamferDistanceLossLayerTest, TestGradient) {
+  typedef typename TypeParam::Dtype Dtype;
+  LayerParameter layer_param;
+  ChamferDistanceLossLayer<Dtype> layer(layer_param);
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  GradientChecker<Dtype> checker(1e-3, 1e-3, 1701);
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+                                  this->blob_top_vec_, 0);
+}
 
 }  // namespace caffe
