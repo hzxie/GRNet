@@ -210,7 +210,7 @@ def get_rplnet(cfg, data_layer, phase='train', data_transforms=None):
                                                           pad=2,
                                                           stride=2,
                                                           weight_filler=dict(type='xavier')))
-    net.dinterp6a = L.Interp(net.deconv1a, height=6, width=8)
+    net.dinterp6a = L.Interp(net.deconv6a, height=6, width=8)
     net.deconv6b = L.Convolution(net.relu11c, kernel_size=3, num_output=256, pad=1, weight_filler=dict(type='xavier'))
     net.dsum6b = L.Eltwise(*[net.dinterp6a, net.deconv6b])
     net.drelu6b = L.ReLU(net.dsum6b, in_place=True)
@@ -245,6 +245,7 @@ def get_rplnet(cfg, data_layer, phase='train', data_transforms=None):
     net.conv15 = L.Convolution(net.drelu8d, kernel_size=3, num_output=3, pad=1)
     net.reshape15 = L.Reshape(net.conv15, reshape_param={'shape': {'dim': [n, 768, 3]}})
     net.ptcloud = L.Concat(*[net.reshape14, net.reshape15])
+    net.loss = L.ChamferDistanceLoss(net.ptcloud, net.gtcloud)
 
     net_prototxt = net.to_proto()
     with open(NET_PROTOTXT_FILE_PATH, 'w') as f:
