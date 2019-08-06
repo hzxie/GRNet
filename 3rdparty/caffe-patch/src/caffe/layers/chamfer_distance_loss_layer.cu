@@ -17,7 +17,7 @@ __global__ void NmDistanceKernel(const int num,
                                  const Dtype* points1,
                                  const int n_points2,
                                  const Dtype* points2,
-                                 Dtype* diff,
+                                 Dtype* dist,
                                  int* indexes) {
   __shared__ Dtype buf[CAFFE_CUDA_NUM_THREADS * 3];
   for (int i = blockIdx.x; i < num; i += gridDim.x) {
@@ -132,8 +132,8 @@ __global__ void NmDistanceKernel(const int num,
             best_i = k + k2;
           }
         }
-        if (k2 == 0 || diff[i * n_points1 + j] > best) {
-          diff[i * n_points1 + j]    = best;
+        if (k2 == 0 || dist[i * n_points1 + j] > best) {
+          dist[i * n_points1 + j]    = best;
           indexes[i * n_points1 + j] = best_i;
         }
       }
@@ -145,21 +145,16 @@ __global__ void NmDistanceKernel(const int num,
 template <typename Dtype>
 void ChamferDistanceLossLayer<Dtype>::Forward_gpu(
   const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-  Dtype* m_dist1 = dist1_.mutable_gpu_data();
-  Dtype* m_dist2 = dist2_.mutable_gpu_data();
-  int* indexes1  = indexes1_.mutable_gpu_data();
-  int* indexes2  = indexes2_.mutable_gpu_data();
-
   const int num       = bottom[0]->num();
   const int n_points1 = bottom[0]->channels();
   const int n_points2 = bottom[1]->channels();
 
   NmDistanceKernel<Dtype><<<dim3(32, 16, 1), CAFFE_CUDA_NUM_THREADS>>>(
     num, n_points1, bottom[0]->gpu_data(), n_points2, bottom[1]->gpu_data(),
-    m_dist1, indexes1);
+    dist1_.mutable_gpu_data(), indexes1_.mutable_gpu_data());
   NmDistanceKernel<Dtype><<<dim3(32, 16, 1), CAFFE_CUDA_NUM_THREADS>>>(
     num, n_points2, bottom[1]->gpu_data(), n_points1, bottom[0]->gpu_data(),
-    m_dist2, indexes2);
+    dist2_.mutable_gpu_data(), indexes2_.mutable_gpu_data());
 
   Dtype loss1(0), loss2(0);
   caffe_gpu_asum(dist1_.count(), dist1_.gpu_data(), &loss1);
@@ -184,14 +179,14 @@ __global__ void NmDistanceGradKernel(int num,
   for (int i = blockIdx.x; i < num; i += gridDim.x) {
     for (int j = threadIdx.x + blockIdx.y * blockDim.x; j < n_points1;
          j += blockDim.x * gridDim.y) {
-      int k   = idx1[i * n_points1 + j];
-      Dtype x1 = points1[(i * n_points1 + j) * 3 + 0];
-      Dtype y1 = points1[(i * n_points1 + j) * 3 + 1];
-      Dtype z1 = points1[(i * n_points1 + j) * 3 + 2];
-      Dtype x2 = points2[(i * n_points2 + k) * 3 + 0];
-      Dtype y2 = points2[(i * n_points2 + k) * 3 + 1];
-      Dtype z2 = points2[(i * n_points2 + k) * 3 + 2];
-      Dtype grad  = grad_dist1 * 2;
+      int k      = idx1[i * n_points1 + j];
+      Dtype x1   = points1[(i * n_points1 + j) * 3 + 0];
+      Dtype y1   = points1[(i * n_points1 + j) * 3 + 1];
+      Dtype z1   = points1[(i * n_points1 + j) * 3 + 2];
+      Dtype x2   = points2[(i * n_points2 + k) * 3 + 0];
+      Dtype y2   = points2[(i * n_points2 + k) * 3 + 1];
+      Dtype z2   = points2[(i * n_points2 + k) * 3 + 2];
+      Dtype grad = grad_dist1 * 2;
       atomicAdd(&(grad_points1[(i * n_points1 + j) * 3 + 0]), grad * (x1 - x2));
       atomicAdd(&(grad_points1[(i * n_points1 + j) * 3 + 1]), grad * (y1 - y2));
       atomicAdd(&(grad_points1[(i * n_points1 + j) * 3 + 2]), grad * (z1 - z2));
@@ -213,8 +208,8 @@ void ChamferDistanceLossLayer<Dtype>::Backward_gpu(
   const int num       = bottom[0]->num();
   const int n_points1 = bottom[0]->channels();
   const int n_points2 = bottom[1]->channels();
-  Dtype grad_dist1  = top[0]->cpu_diff()[0] / n_points1 / num;
-  Dtype grad_dist2  = top[0]->cpu_diff()[0] / n_points2 / num;
+  Dtype grad_dist1    = Dtype(1.0) / n_points1 / num;
+  Dtype grad_dist2    = Dtype(1.0) / n_points2 / num;
 
   NmDistanceGradKernel<Dtype><<<dim3(1, 16, 1), CAFFE_CUDA_NUM_THREADS / 2>>>(
     num, n_points1, bottom[0]->gpu_data(), n_points2, bottom[1]->gpu_data(),
@@ -224,6 +219,9 @@ void ChamferDistanceLossLayer<Dtype>::Backward_gpu(
     num, n_points2, bottom[1]->gpu_data(), n_points1, bottom[0]->gpu_data(),
     grad_dist2, indexes2, bottom[1]->mutable_gpu_diff(),
     bottom[0]->mutable_gpu_diff());
+
+  Dtype* diff0 = bottom[0]->mutable_cpu_diff();
+  Dtype* diff1 = bottom[1]->mutable_cpu_diff();
 
   CUDA_POST_KERNEL_CHECK;
 }

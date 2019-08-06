@@ -1330,7 +1330,6 @@ message V1LayerParameter {
     ACCURACY = 1;
     ARGMAX = 30;
     BNLL = 2;
-    CHAMFER_DISTANCE_LOSS = 40;
     CONCAT = 3;
     CONTRASTIVE_LOSS = 37;
     CONVOLUTION = 4;

@@ -118,7 +118,7 @@ def train_net(cfg):
     val_net = get_rplnet(cfg, val_data_layer, 'val')
 
     # Set up the iters for solvers
-    cfg.TEST.TEST_ITER = val_dataset.get_n_itrs()    # Test all samples during testing, batch size = 1
+    cfg.TEST.TEST_ITER = 1 # val_dataset.get_n_itrs()    # Test all samples during testing, batch size = 1
     cfg.TEST.TEST_FREQ_ITER = train_dataset.get_n_itrs()    # The value indicates n_itrs within an epoch
     cfg.TRAIN.SAVE_FREQ_ITER = cfg.TRAIN.SAVE_FREQ_EPOCH * cfg.TEST.TEST_FREQ_ITER
     cfg.TRAIN.STEP_SIZE_ITER = cfg.TRAIN.LR_MILESTONE_EPOCH * cfg.TEST.TEST_FREQ_ITER
