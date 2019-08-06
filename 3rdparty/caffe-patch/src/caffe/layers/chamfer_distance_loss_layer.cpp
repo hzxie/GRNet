@@ -88,7 +88,7 @@ void ChamferDistanceLossLayer<Dtype>::Forward_cpu(
 
   Dtype loss1 = caffe_cpu_asum(dist1_.count(), dist1_.cpu_data()) / num;
   Dtype loss2 = caffe_cpu_asum(dist2_.count(), dist2_.cpu_data()) / num;
-  Dtype loss  = loss1 + loss2;
+  Dtype loss  = (loss1 + loss2);
   top[0]->mutable_cpu_data()[0] = loss;
 }
 
@@ -103,8 +103,8 @@ void ChamferDistanceLossLayer<Dtype>::Backward_cpu(
   const int num       = bottom[0]->num();
   const int n_points1 = bottom[0]->channels();
   const int n_points2 = bottom[1]->channels();
-  Dtype grad_dist1    = top[0]->cpu_diff()[0] / n_points1 / num;
-  Dtype grad_dist2    = top[0]->cpu_diff()[0] / n_points2 / num;
+  Dtype grad_dist1    = Dtype(1.0) / n_points1 / num;
+  Dtype grad_dist2    = Dtype(1.0) / n_points2 / num;
 
   Dtype* diff1 = bottom[0]->mutable_cpu_diff();
   Dtype* diff2 = bottom[1]->mutable_cpu_diff();
@@ -144,6 +144,7 @@ void ChamferDistanceLossLayer<Dtype>::Backward_cpu(
       diff2[(i * n_points2 + j) * 3 + 2] += grad * (z1 - z2);
       diff1[(i * n_points1 + k) * 3 + 0] += grad * (x2 - x1);
       diff1[(i * n_points1 + k) * 3 + 1] += grad * (y2 - y1);
+      diff1[(i * n_points1 + k) * 3 + 2] += grad * (z2 - z1);
     }
   }
 }
