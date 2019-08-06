@@ -9,9 +9,12 @@ import os
 import utils.data_loaders
 
 from datetime import datetime
+from tensorboardX import SummaryWriter
+from time import time
 
 from models.rplnet import get_rplnet
 from utils.solvers import get_solver
+from utils.average_meter import AverageMeter
 
 
 def train_net(cfg):
@@ -113,12 +116,16 @@ def train_net(cfg):
     if not os.path.exists(cfg.DIR.CHECKPOINTS):
         os.makedirs(cfg.DIR.CHECKPOINTS)
 
+    # Create tensorboard writers
+    train_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, 'train'))
+    val_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, 'test'))
+
     # Create the networks
     train_net = get_rplnet(cfg, train_data_layer, 'train')
     val_net = get_rplnet(cfg, val_data_layer, 'val')
 
     # Set up the iters for solvers
-    cfg.TEST.TEST_ITER = 1 # val_dataset.get_n_itrs()    # Test all samples during testing, batch size = 1
+    cfg.TEST.TEST_ITER = val_dataset.get_n_itrs()    # Test all samples during testing, batch size = 1
     cfg.TEST.TEST_FREQ_ITER = train_dataset.get_n_itrs()    # The value indicates n_itrs within an epoch
     cfg.TRAIN.SAVE_FREQ_ITER = cfg.TRAIN.SAVE_FREQ_EPOCH * cfg.TEST.TEST_FREQ_ITER
     cfg.TRAIN.STEP_SIZE_ITER = cfg.TRAIN.LR_MILESTONE_EPOCH * cfg.TEST.TEST_FREQ_ITER
@@ -127,11 +134,27 @@ def train_net(cfg):
     # Create the solvers
     solver = caffe.get_solver(get_solver(cfg, train_net, val_net))
 
-    # Training the network
-    for epoch_idx in range(cfg.TRAIN.N_EPOCHS):
-        for batch_idx in range(cfg.TRAIN.N_ITERS):
-            solver.step(1)
-            logging.info('[Epoch %d/%d][Batch %d/%d]' %
-                         (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx, cfg.TEST.TEST_FREQ_ITER))
+    # Training/Testing the network
+    losses = AverageMeter()
+    for itr_idx in range(cfg.TRAIN.N_ITERS):
+        _time = time()
 
-    # Testing the network
+        epoch_idx = itr_idx / cfg.TEST.TEST_FREQ_ITER
+        batch_idx = itr_idx % cfg.TEST.TEST_FREQ_ITER
+
+        solver.step(1)
+        loss = solver.net.blobs['loss'].data
+        losses.update(loss)
+        train_writer.add_scalar('BatchLoss', loss, itr_idx + 1)
+
+        if itr_idx % cfg.TEST.TEST_FREQ_ITER == 0:
+            test_loss = solver.test_nets[0].blobs['loss'].data
+            train_writer.add_scalar('EpochLoss', losses.avg, itr_idx + 1)
+            val_writer.add_scalar('EpochLoss', test_loss, itr_idx + 1)
+            losses.reset()
+
+        logging.info('[Epoch %d/%d][Batch %d/%d] Time = %.3f(s) Loss = %.4f' %
+                     (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx + 1, cfg.TEST.TEST_FREQ_ITER, time() - _time, loss))
+
+    train_writer.close()
+    val_writer.close()
