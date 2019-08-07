@@ -7,3 +7,4 @@ pprint
 pyexr
 scipy
 tensorboardX
+torch

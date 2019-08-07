@@ -5,6 +5,7 @@
 import cv2
 import numpy as np
 import random
+import torch
 
 
 class Compose(object):
@@ -43,8 +44,8 @@ class ToTensor(object):
             tensor = arr.transpose(2, 0, 1)
         else:
             raise Exception('Unknown shape: %s' % list(shape))
-
-        return tensor
+        # Ref: https://discuss.pytorch.org/t/torch-from-numpy-not-support-negative-strides/3663/2
+        return torch.from_numpy(tensor.copy()).float()
 
 
 class Normalize(object):

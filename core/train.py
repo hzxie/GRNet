@@ -2,25 +2,29 @@
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
-import caffe
 import logging
 import os
+import torch
 
 import utils.data_loaders
+import utils.data_transforms
+import utils.helpers
 
 from datetime import datetime
-from tensorboardX import SummaryWriter
 from time import time
+from tensorboardX import SummaryWriter
 
-from models.rplnet import get_rplnet
-from utils.solvers import get_solver
+from models.psgn import PSGN
 from utils.average_meter import AverageMeter
+from extensions.chamfer_dist import ChamferDistance
 
 
 def train_net(cfg):
-    train_dataset = utils.data_loaders.get_dataset(cfg.CONST.DATASET, cfg, 'train')
-    val_dataset = utils.data_loaders.get_dataset(cfg.CONST.DATASET, cfg, 'val')
-    train_data_transforms = [{
+    # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
+    torch.backends.cudnn.benchmark = True
+
+    # Set up data augmentation
+    train_transforms = utils.data_transforms.Compose([{
         'callback': 'RandomCrop',
         'parameters': {
             'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
@@ -52,8 +56,8 @@ def train_net(cfg):
         'callback': 'ToTensor',
         'parameters': None,
         'objects': ['rgb_img', 'depth_img', 'ptcloud']
-    }]
-    val_data_transforms = [{
+    }])
+    val_transforms = utils.data_transforms.Compose([{
         'callback': 'CenterCrop',
         'parameters': {
             'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
@@ -77,37 +81,25 @@ def train_net(cfg):
         'callback': 'ToTensor',
         'parameters': None,
         'objects': ['rgb_img', 'depth_img', 'ptcloud']
-    }]
-    train_data_layer = caffe.layers.Python(name='data',
-                                           include={'phase': caffe.TRAIN},
-                                           ntop=3,
-                                           python_param={
-                                               'module':
-                                               'utils.data_loaders',
-                                               'layer':
-                                               utils.data_loaders.get_data_layer(cfg.CONST.DATASET),
-                                               'param_str':
-                                               repr({
-                                                   'cfg': cfg,
-                                                   'subset': 'train',
-                                                   'transforms': train_data_transforms
-                                               })
-                                           })
-    val_data_layer = caffe.layers.Python(name='data',
-                                         include={'phase': caffe.TEST},
-                                         ntop=3,
-                                         python_param={
-                                             'module':
-                                             'utils.data_loaders',
-                                             'layer':
-                                             utils.data_loaders.get_data_layer(cfg.CONST.DATASET),
-                                             'param_str':
-                                             repr({
-                                                 'cfg': cfg,
-                                                 'subset': 'val',
-                                                 'transforms': val_data_transforms
-                                             })
-                                         })
+    }])
+
+    # Set up data loader
+    dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.CONST.DATASET](cfg)
+    train_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
+        utils.data_loaders.DatasetSubset.TRAIN, train_transforms),
+                                                    batch_size=cfg.TRAIN.BATCH_SIZE,
+                                                    num_workers=cfg.CONST.NUM_WORKERS,
+                                                    collate_fn=utils.data_loaders.collate_fn,
+                                                    pin_memory=True,
+                                                    shuffle=True,
+                                                    drop_last=True)
+    val_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
+        utils.data_loaders.DatasetSubset.VAL, val_transforms),
+                                                  batch_size=1,
+                                                  num_workers=cfg.CONST.NUM_WORKERS,
+                                                  collate_fn=utils.data_loaders.collate_fn,
+                                                  pin_memory=True,
+                                                  shuffle=False)
 
     # Set up folders for logs and checkpoints
     output_dir = os.path.join(cfg.DIR.OUT_PATH, '%s', datetime.now().isoformat())
@@ -121,40 +113,72 @@ def train_net(cfg):
     val_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, 'test'))
 
     # Create the networks
-    train_net = get_rplnet(cfg, train_data_layer, 'train')
-    val_net = get_rplnet(cfg, val_data_layer, 'val')
+    network = PSGN(cfg)
+    network.apply(utils.helpers.init_weights)
+    logging.debug('Parameters in network: %d.' % utils.helpers.count_parameters(network))
 
-    # Set up the iters for solvers
-    cfg.TEST.TEST_ITER = val_dataset.get_n_itrs()    # Test all samples during testing, batch size = 1
-    cfg.TEST.TEST_FREQ_ITER = train_dataset.get_n_itrs()    # The value indicates n_itrs within an epoch
-    cfg.TRAIN.SAVE_FREQ_ITER = cfg.TRAIN.SAVE_FREQ_EPOCH * cfg.TEST.TEST_FREQ_ITER
-    cfg.TRAIN.STEP_SIZE_ITER = cfg.TRAIN.LR_MILESTONE_EPOCH * cfg.TEST.TEST_FREQ_ITER
-    cfg.TRAIN.N_ITERS = cfg.TRAIN.N_EPOCHS * cfg.TEST.TEST_FREQ_ITER
+    # Move the network to GPU if possible
+    if torch.cuda.is_available():
+        network = torch.nn.DataParallel(network).cuda()
 
-    # Create the solvers
-    solver = caffe.get_solver(get_solver(cfg, train_net, val_net))
+    # Create the optimizers
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, network.parameters()),
+                                 lr=cfg.TRAIN.LEARNING_RATE,
+                                 weight_decay=cfg.TRAIN.WEIGHT_DECAY,
+                                 betas=cfg.TRAIN.BETAS)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                                        milestones=cfg.TRAIN.LR_MILESTONES,
+                                                        gamma=cfg.TRAIN.GAMMA)
+
+    # Set up loss functions
+    chamfer_distance = ChamferDistance()
+
+    # Load pretrained model if exists
+    init_epoch = 0
 
     # Training/Testing the network
     losses = AverageMeter()
-    for itr_idx in range(cfg.TRAIN.N_ITERS):
-        _time = time()
+    for epoch_idx in range(init_epoch, cfg.TRAIN.N_EPOCHS):
+        epoch_start_time = time()
 
-        epoch_idx = itr_idx / cfg.TEST.TEST_FREQ_ITER
-        batch_idx = itr_idx % cfg.TEST.TEST_FREQ_ITER
+        batch_time = AverageMeter()
+        data_time = AverageMeter()
+        losses = AverageMeter()
 
-        solver.step(1)
-        loss = solver.net.blobs['loss'].data
-        losses.update(loss)
-        train_writer.add_scalar('BatchLoss', loss, itr_idx + 1)
+        lr_scheduler.step()
+        network.train()
 
-        if itr_idx % cfg.TEST.TEST_FREQ_ITER == 0:
-            test_loss = solver.test_nets[0].blobs['loss'].data
-            train_writer.add_scalar('EpochLoss', losses.avg, itr_idx + 1)
-            val_writer.add_scalar('EpochLoss', test_loss, itr_idx + 1)
-            losses.reset()
+        batch_end_time = time()
+        n_batches = len(train_data_loader)
+        for batch_idx, (taxonomy_ids, model_ids, data) in enumerate(train_data_loader):
+            data_time.update(time() - batch_end_time)
+            for k, v in data.items():
+                data[k] = utils.helpers.var_or_cuda(v)
 
-        logging.info('[Epoch %d/%d][Batch %d/%d] Time = %.3f(s) Loss = %.4f' %
-                     (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx + 1, cfg.TEST.TEST_FREQ_ITER, time() - _time, loss))
+            ptclouds = network(data)
+            dist1, dist2 = chamfer_distance(ptclouds, data['ptcloud'])
+            loss = torch.mean(dist1) + torch.mean(dist2)
+            losses.update(loss.item())
+
+            network.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            n_itr = epoch_idx * n_batches + batch_idx
+            train_writer.add_scalar('BatchLoss', losses.val, n_itr)
+
+            batch_time.update(time() - batch_end_time)
+            batch_end_time = time()
+            logging.info('[Epoch %d/%d][Batch %d/%d] BatchTime = %.3f (s) DataTime = %.3f (s) Loss = %.4f' %
+                         (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx + 1, n_batches, batch_time.val,
+                          data_time.val, losses.val))
+
+        epoch_end_time = time()
+        train_writer.add_scalar('EpochLoss', losses.avg, epoch_idx + 1)
+        logging.info('Epoch [%d/%d] EpochTime = %.3f (s) Loss = %.4f' %
+                     (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, losses.avg))
+
+        _loss = test_net(cfg, epoch_idx, output_dir, val_data_loader, val_writer, network)
 
     train_writer.close()
     val_writer.close()

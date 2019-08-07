@@ -27,7 +27,8 @@ __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Data
 # Constants
 #
 __C.CONST                                      = edict()
-__C.CONST.DEVICE                               = 0
+__C.CONST.DEVICE                               = '0'
+__C.CONST.NUM_WORKERS                          = 4
 __C.CONST.DATASET                              = 'ShapeNet'
 __C.CONST.DATASET_MEAN                         = [0.5, 0.5, 0.5]
 __C.CONST.DATASET_STD                          = [0.5, 0.5, 0.5]
@@ -35,7 +36,7 @@ __C.CONST.IMG_W                                = 256
 __C.CONST.IMG_H                                = 192
 __C.CONST.CROP_IMG_W                           = 210
 __C.CONST.CROP_IMG_H                           = 210
-__C.CONST.N_POINTS                             = 2048
+__C.CONST.N_POINTS                             = 1024
 
 #
 # Directories
@@ -61,10 +62,10 @@ __C.TRAIN.BATCH_SIZE                           = 16
 __C.TRAIN.N_EPOCHS                             = 250
 __C.TRAIN.SAVE_FREQ_EPOCH                      = 25
 __C.TRAIN.LEARNING_RATE                        = 1e-4
-__C.TRAIN.LR_MILESTONE_EPOCH                   = 150
+__C.TRAIN.LR_MILESTONES                        = [150]
 __C.TRAIN.GAMMA                                = .5
 __C.TRAIN.BETAS                                = (.9, .999)
-__C.TRAIN.WEIGHT_DECAY                         = 5e-4
+__C.TRAIN.WEIGHT_DECAY                         = 5e-5
 __C.TRAIN.RANDOM_BG_COLOR                      = [[225, 255], [225, 255], [225, 255]]
 
 #
