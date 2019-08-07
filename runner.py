@@ -3,22 +3,22 @@
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
-# Disable Caffe Output
-import os
-# os.environ['GLOG_minloglevel'] = '2'
-
 import argparse
-import caffe
 import cv2
 import logging
 import matplotlib
+import os
 import sys
+import torch
 
-# Fix problem: no $DISPLAY environment variable
+# Fix no $DISPLAY environment variable
 matplotlib.use('Agg')
 
 # Fix deadlock in DataLoader
 cv2.setNumThreads(0)
+
+# Fix CUDA error: initialization error
+torch.multiprocessing.set_start_method('spawn', force="True")
 
 from pprint import pprint
 
@@ -29,7 +29,7 @@ from core.test import test_net
 
 def get_args_from_command_line():
     parser = argparse.ArgumentParser(description='The argument parser of R2Net runner')
-    parser.add_argument('--gpu', dest='gpu_id', help='GPU device to use', default=cfg.CONST.DEVICE, type=int)
+    parser.add_argument('--gpu', dest='gpu_id', help='GPU device to use', default=cfg.CONST.DEVICE, type=str)
     parser.add_argument('--test', dest='test', help='Test neural networks', action='store_true')
     parser.add_argument('--weights', dest='weights', help='Initialize network from the weights file', default=None)
     args = parser.parse_args()
@@ -50,8 +50,7 @@ def main():
     pprint(cfg)
 
     # Set GPU to use
-    caffe.set_mode_gpu()
-    caffe.set_device(cfg.CONST.DEVICE)
+    os.environ["CUDA_VISIBLE_DEVICES"] = cfg.CONST.DEVICE
 
     # Start train/test process
     if not args.test:

@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
-#
-# References:
-# - https://github.com/BVLC/caffe/blob/master/examples/pycaffe/layers/pascal_multilabel_datalayers.py
 
-import caffe
 import json
 import logging
-import random
 import numpy as np
+import random
+import torch.utils.data.dataset
 
 import utils.data_transforms
 
@@ -27,85 +24,103 @@ except:
     pass
 
 
-def get_dataset(dataset_name, cfg, subset):
-    DATASETS = {
-        'ShapeNet': ShapeNetDataset,
-    }
-
-    return DATASETS[dataset_name](cfg, subset)
-
-
-def get_data_layer(dataset_name):
-    return '%sDataLayer' % dataset_name
+@unique
+class DatasetSubset(Enum):
+    TRAIN = 0
+    TEST = 1
+    VAL = 2
 
 
-class BatchLoader(object):
-    def __init__(self, cfg, file_list, subset, transforms=None, mc_client=None):
+def collate_fn(batch):
+    taxonomy_ids = []
+    model_ids = []
+    data = {}
+
+    for sample in batch:
+        taxonomy_ids.append(sample[0])
+        model_ids.append(sample[1])
+        _data = sample[2]
+        for k, v in _data.items():
+            if k not in data:
+                data[k] = []
+            data[k].append(v)
+
+    for k, v in data.items():
+        data[k] = torch.stack(v, 0)
+
+    return taxonomy_ids, model_ids, data
+
+
+class Dataset(torch.utils.data.dataset.Dataset):
+    def __init__(self, cfg, file_list, transforms=None, mc_client=None):
         self.cfg = cfg
         self.file_list = file_list
-        self.shuffle = True if subset == 'train' else False
-        self.transformers = utils.data_transforms.Compose(transforms)
+        self.transforms = transforms
         self.mc_client = mc_client
-        self.cursor = 0
-        self.count = len(self.file_list)
 
-    def _reset(self):
-        self.cursor = 0
+    def __len__(self):
+        return len(self.file_list)
 
-        if self.shuffle:
-            random.shuffle(self.file_list)
-
-    def next(self):
-        if self.cursor >= self.count:
-            self._reset()
-
-        file = self.file_list[self.cursor]
-        raw_data = {}
-        rand_idx = random.randint(0, self.cfg['n_renderings'] - 1) if self.shuffle else 0
+    def __getitem__(self, idx):
+        sample = self.file_list[idx]
+        data = {}
+        rand_idx = random.randint(0, self.cfg['n_renderings'] - 1) if self.cfg['shuffle'] else 0
         for ri in self.cfg['required_items']:
-            file_path = file['%s_path' % ri]
+            file_path = sample['%s_path' % ri]
             if type(file_path) == list:
                 file_path = file_path[rand_idx]
 
-            raw_data[ri] = IO.get(self.mc_client, file_path)
+            data[ri] = IO.get(self.mc_client, file_path)
 
-        if self.transformers is not None:
-            data = self.transformers(raw_data)
+        if self.transforms is not None:
+            data = self.transforms(data)
 
-        self.cursor += 1
-        return data
-
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        subset = args[1]
-        instance_key = '%s/%s' % (cls.__name__, subset)
-
-        if instance_key not in cls._instances:
-            cls._instances[instance_key] = super(Singleton, cls).__call__(*args, **kwargs)
-
-        return cls._instances[instance_key]
+        return sample['taxonomy_id'], sample['model_id'], data
 
 
-class ShapeNetDataset(metaclass=Singleton):
-    def __init__(self, cfg, subset):
+class ShapeNetDataLoader(object):
+    def __init__(self, cfg):
         self.cfg = cfg
-        self.subset = subset
-        self.file_list = self._get_file_list(cfg, subset)
+        # Set up MemCached if available
+        self.mc_client = None
+        if cfg.MEMCACHED.ENABLED:
+            self.mc_client = mc.MemcachedClient.GetInstance(cfg.MEMCACHED.SERVER_CONFIG, cfg.MEMCACHED.CLIENT_CONFIG)
+
+        # Load the dataset indexing file
+        self.dataset_categories = []
+        with open(cfg.DATASETS.SHAPENET.CATEGORY_FILE_PATH) as f:
+            self.dataset_categories = json.loads(f.read())
+
+    def get_dataset(self, subset, transforms=None):
+        file_list = self._get_file_list(self.cfg, self._get_subset(subset))
+        return Dataset(
+            {
+                'n_renderings': self.cfg.DATASETS.SHAPENET.N_RENDERINGS,
+                'required_items': ['rgb_img', 'depth_img', 'ptcloud'],
+                'shuffle': subset == DatasetSubset.TRAIN
+            }, file_list, transforms, self.mc_client)
+
+    def _get_subset(self, subset):
+        if subset == DatasetSubset.TRAIN:
+            return 'train'
+        elif subset == DatasetSubset.VAL:
+            return 'val'
+        else:
+            return 'test'
 
     def _get_file_list(self, cfg, subset):
         """Prepare file list for the dataset"""
         file_list = []
-        with open(self.cfg.DATASETS.SHAPENET.CATEGORY_FILE_PATH) as f:
-            data_cateogries = json.loads(f.read())
 
-        for dc in data_cateogries:
+        for dc in self.dataset_categories:
             logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
             samples = dc[subset]
             for s in tqdm(samples, leave=False):
                 file_list.append({
+                    'taxonomy_id':
+                    dc['taxonomy_id'],
+                    'model_id':
+                    s,
                     'rgb_img_path': [
                         cfg.DATASETS.SHAPENET.RGB_IMG_PATH % (dc['taxonomy_id'], s, i)
                         for i in range(cfg.DATASETS.SHAPENET.N_RENDERINGS)
@@ -121,57 +136,9 @@ class ShapeNetDataset(metaclass=Singleton):
         logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
         return file_list
 
-    def get_n_itrs(self):
-        batch_size = self.cfg.TRAIN.BATCH_SIZE if self.subset == 'train' else 1
-        return len(self.file_list) // batch_size
 
+# //////////////////////////////////////////// = Dataset Loader Mapping = //////////////////////////////////////////// #
 
-class ShapeNetDataLayer(caffe.Layer):
-    def setup(self, bottom, top):
-        self.top_names = ['rgb', 'depth', 'ptcloud']
-
-        # Parse Python parameters
-        param = eval(self.param_str)
-        self.cfg = edict(param['cfg'])
-        self.subset = param['subset']
-        self.batch_size = self.cfg.TRAIN.BATCH_SIZE if self.subset == 'train' else 1
-
-        # Get file list
-        self.dataset = ShapeNetDataset(self.cfg, self.subset)
-        self.file_list = self.dataset.file_list
-
-        # Set up MemCached if available
-        mc_client = None
-        if self.cfg.MEMCACHED.ENABLED:
-            self.mc_client = mc.MemcachedClient.GetInstance(cfg.MEMCACHED.SERVER_CONFIG, cfg.MEMCACHED.CLIENT_CONFIG)
-
-        # Set up batch loader
-        cfg = {
-            'n_renderings': self.cfg.DATASETS.SHAPENET.N_RENDERINGS,
-            'required_items': ['rgb_img', 'depth_img', 'ptcloud']
-        }
-        self.batch_loader = BatchLoader(cfg, self.file_list, self.subset, param['transforms'], mc_client)
-
-        # Reshape Tops
-        top[0].reshape(self.batch_size, 3, self.cfg.CONST.IMG_H, self.cfg.CONST.IMG_W)
-        top[1].reshape(self.batch_size, 1, self.cfg.CONST.IMG_H, self.cfg.CONST.IMG_W)
-        top[2].reshape(self.batch_size, self.cfg.DATASETS.SHAPENET.N_POINTS, 3)
-
-    def forward(self, bottom, top):
-        """Load data."""
-        for i in range(self.batch_size):
-            # Use the batch loader to load the next data.
-            data = self.batch_loader.next()
-
-            # Add directly to the caffe data layer
-            top[0].data[i, ...] = data['rgb_img']
-            top[1].data[i, ...] = data['depth_img']
-            top[2].data[i, ...] = data['ptcloud']
-
-    def reshape(self, bottom, top):
-        """There is no need to reshape the data, since the input is of fixed size (rows and columns)"""
-        pass
-
-    def backward(self, top, propagate_down, bottom):
-        """These layers does not back propagate"""
-        pass
+DATASET_LOADER_MAPPING = {
+    'ShapeNet': ShapeNetDataLoader
+} # yapf: disable

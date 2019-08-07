@@ -35,14 +35,14 @@ class IO:
     @classmethod
     def _read_img(cls, mc_client, file_path):
         if mc_client is None:
-            return cv2.imread(file_path, cv2.IMREAD_UNCHANGED) / 255.
+            return cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
         else:
             pyvector = mc.pyvector()
             mc_client.Get(file_path, pyvector)
             buf = mc.ConvertBuffer(pyvector)
             img_array = np.frombuffer(buf, np.uint8)
             img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
-            return img / 255.
+            return img
 
     # References: https://github.com/numpy/numpy/blob/master/numpy/lib/format.py
     @classmethod
