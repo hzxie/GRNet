@@ -14,9 +14,11 @@ from datetime import datetime
 from time import time
 from tensorboardX import SummaryWriter
 
+from core.test import test_net
+from extensions.chamfer_dist import ChamferDistance
 from models.psgn import PSGN
 from utils.average_meter import AverageMeter
-from extensions.chamfer_dist import ChamferDistance
+from utils.metrics import Metrics
 
 
 def train_net(cfg):
@@ -131,10 +133,21 @@ def train_net(cfg):
                                                         gamma=cfg.TRAIN.GAMMA)
 
     # Set up loss functions
-    chamfer_distance = ChamferDistance()
+    loss = ChamferDistance()
 
     # Load pretrained model if exists
     init_epoch = 0
+    best_metrics = None
+    best_epoch = -1
+    if 'WEIGHTS' in cfg.CONST:
+        logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
+        checkpoint = torch.load(cfg.CONST.WEIGHTS)
+        init_epoch = checkpoint['epoch_idx']
+        best_epoch = checkpoint['best_epoch']
+        best_metrics = Metrics(cfg.TEST.METRIC_NAME, checkpoint['best_metrics'])
+        network.load_state_dict(checkpoint['network_state_dict'])
+        logging.info('Recover complete. Current epoch #%d, best metrics = %s at epoch #%d.' %
+                     (init_epoch, best_metrics, best_epoch))
 
     # Training/Testing the network
     losses = AverageMeter()
@@ -156,29 +169,42 @@ def train_net(cfg):
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptclouds = network(data)
-            dist1, dist2 = chamfer_distance(ptclouds, data['ptcloud'])
-            loss = torch.mean(dist1) + torch.mean(dist2)
-            losses.update(loss.item())
+            dist1, dist2 = loss(ptclouds, data['ptcloud'])
+            _loss = torch.mean(dist1) + torch.mean(dist2)
+            losses.update(_loss.item() * 1000)
 
             network.zero_grad()
-            loss.backward()
+            _loss.backward()
             optimizer.step()
 
             n_itr = epoch_idx * n_batches + batch_idx
-            train_writer.add_scalar('BatchLoss', losses.val, n_itr)
+            train_writer.add_scalar('Loss/Batch', losses.val(), n_itr)
 
             batch_time.update(time() - batch_end_time)
             batch_end_time = time()
             logging.info('[Epoch %d/%d][Batch %d/%d] BatchTime = %.3f (s) DataTime = %.3f (s) Loss = %.4f' %
-                         (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx + 1, n_batches, batch_time.val,
-                          data_time.val, losses.val))
+                         (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx + 1, n_batches, batch_time.val(),
+                          data_time.val(), losses.val()))
 
         epoch_end_time = time()
-        train_writer.add_scalar('EpochLoss', losses.avg, epoch_idx + 1)
+        train_writer.add_scalar('Loss/Epoch', losses.avg(), epoch_idx + 1)
         logging.info('Epoch [%d/%d] EpochTime = %.3f (s) Loss = %.4f' %
-                     (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, losses.avg))
+                     (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, losses.avg()))
 
-        _loss = test_net(cfg, epoch_idx, output_dir, val_data_loader, val_writer, network)
+        # Validate the current model
+        metrics = test_net(cfg, epoch_idx, output_dir, val_data_loader, val_writer, network)
+
+        # Save ckeckpoints
+        _epoch_idx = epoch_idx + 1
+        if _epoch_idx % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
+            file_name = 'ckpt-best.pth' if metrics.better_than(best_metrics) else 'ckpt-epoch-%03d.pth' % _epoch_idx
+            output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
+            torch.save({
+                'epoch_index': epoch_idx + 1,
+                'best_metrics': metrics.state_dict(),
+                'network': network.state_dict()
+            }, output_path) # yapf: disable
+            logging.info('Saved checkpoint to %s ...' % output_path)
 
     train_writer.close()
     val_writer.close()

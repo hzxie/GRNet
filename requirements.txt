@@ -2,6 +2,7 @@ argparse
 easydict
 matplotlib
 numpy
+open3d-python
 opencv-python
 pprint
 pyexr

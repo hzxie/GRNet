@@ -52,8 +52,8 @@ def collate_fn(batch):
 
 
 class Dataset(torch.utils.data.dataset.Dataset):
-    def __init__(self, cfg, file_list, transforms=None, mc_client=None):
-        self.cfg = cfg
+    def __init__(self, options, file_list, transforms=None, mc_client=None):
+        self.options = options
         self.file_list = file_list
         self.transforms = transforms
         self.mc_client = mc_client
@@ -64,8 +64,8 @@ class Dataset(torch.utils.data.dataset.Dataset):
     def __getitem__(self, idx):
         sample = self.file_list[idx]
         data = {}
-        rand_idx = random.randint(0, self.cfg['n_renderings'] - 1) if self.cfg['shuffle'] else 0
-        for ri in self.cfg['required_items']:
+        rand_idx = random.randint(0, self.options['n_renderings'] - 1) if self.options['shuffle'] else 0
+        for ri in self.options['required_items']:
             file_path = sample['%s_path' % ri]
             if type(file_path) == list:
                 file_path = file_path[rand_idx]
