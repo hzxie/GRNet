@@ -2,7 +2,12 @@
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def var_or_cuda(x):
@@ -28,3 +33,26 @@ def init_weights(m):
 
 def count_parameters(network):
     return sum(p.numel() for p in network.parameters())
+
+
+def get_ptcloud_img(ptcloud):
+    fig = plt.figure(figsize=(8, 8))
+    ptcloud = np.transpose(ptcloud, (1, 0))
+
+    x, z, y = ptcloud
+    ax = fig.gca(projection='3d', adjustable='box')
+    ax.axis('off')
+    ax.axis('scaled')
+    ax.view_init(30, 45)
+
+    max, min = np.max(ptcloud), np.min(ptcloud)
+    ax.set_xbound(min, max)
+    ax.set_ybound(min, max)
+    ax.set_zbound(min, max)
+    ax.scatter(x, y, z, zdir='z', c=x, cmap='jet')
+
+    fig.canvas.draw()
+    img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    print(img.shape)
+    return img

@@ -7,5 +7,5 @@ opencv-python
 pprint
 pyexr
 scipy
-tensorboardX
+tensorboardX==1.2
 torch
