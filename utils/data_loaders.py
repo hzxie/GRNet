@@ -71,7 +71,7 @@ class Dataset(torch.utils.data.dataset.Dataset):
             if type(file_path) == list:
                 file_path = file_path[rand_idx]
 
-            data[ri] = IO.get(self.mc_client, file_path)
+            data[ri] = IO.get(self.mc_client, file_path).astype(np.float32)
 
         if self.transforms is not None:
             data = self.transforms(data)
