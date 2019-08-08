@@ -103,8 +103,9 @@ def test_net(cfg, epoch_idx=-1, output_dir=None, test_data_loader=None, test_wri
                 category_metrics[taxonomy_id] = AverageMeter(Metrics.items())
             category_metrics[taxonomy_id].update(_metrics)
 
-            logging.info('Test[%d/%d] Taxonomy = %s Sample = %s Loss = %.4f Metrics = %s' %
-                         (model_idx + 1, n_samples, taxonomy_id, model_id, test_losses.val(), _metrics))
+            logging.info(
+                'Test[%d/%d] Taxonomy = %s Sample = %s Loss = %.4f Metrics = %s' %
+                (model_idx + 1, n_samples, taxonomy_id, model_id, test_losses.val(), ['%.4f' % m for m in _metrics]))
 
     # Print testing results
     print('============================ TEST RESULTS ============================')
@@ -119,7 +120,8 @@ def test_net(cfg, epoch_idx=-1, output_dir=None, test_data_loader=None, test_wri
         print(category_metrics[taxonomy_id].count(0), end='\t')
         for value in category_metrics[taxonomy_id].avg():
             print('%.4f' % value, end='\t')
-    print()
+        print()
+
     print('Overall', end='\t\t\t')
     for value in test_metrics.avg():
         print('%.4f' % value, end='\t')
@@ -129,6 +131,6 @@ def test_net(cfg, epoch_idx=-1, output_dir=None, test_data_loader=None, test_wri
     if not test_writer is None:
         test_writer.add_scalar('Loss/Epoch', test_losses.avg(), epoch_idx + 1)
         for i, metric in enumerate(test_metrics.items):
-            test_writer.add_scalar('Metric/%s' % metric, test_metrics.avg(i))
+            test_writer.add_scalar('Metric/%s' % metric, test_metrics.avg(i), epoch_idx + 1)
 
     return Metrics(cfg.TEST.METRIC_NAME, test_metrics.avg())

@@ -20,7 +20,7 @@ __C.DATASETS.SHAPENET.N_POINTS                 = 16384
 __C.DATASETS.SHAPENET.DEPTH_MAX_VALUE          = 255
 __C.DATASETS.SHAPENET.K                        = []
 __C.DATASETS.SHAPENET.RGB_IMG_PATH             = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/render_%02d_l.png'
-__C.DATASETS.SHAPENET.DEPTH_IMG_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/disp_%02d_l.exr'
+__C.DATASETS.SHAPENET.DEPTH_IMG_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/depth_%02d_l.exr'
 __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetPoints/%s/%s.npy'
 
 
