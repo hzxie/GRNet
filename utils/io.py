@@ -66,4 +66,4 @@ class IO:
 
     @classmethod
     def _read_exr(cls, mc_client, file_path):
-        return pyexr.open(file_path).get("Depth.Z").astype(np.float32)
+        return pyexr.open(file_path).get("Disparity.Z").astype(np.float32)

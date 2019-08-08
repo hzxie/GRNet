@@ -17,9 +17,10 @@ __C.DATASETS.SHAPENET                          = edict()
 __C.DATASETS.SHAPENET.CATEGORY_FILE_PATH       = './datasets/ShapeNet.json'
 __C.DATASETS.SHAPENET.N_RENDERINGS             = 24
 __C.DATASETS.SHAPENET.N_POINTS                 = 16384
+__C.DATASETS.SHAPENET.DEPTH_MAX_VALUE          = 255
 __C.DATASETS.SHAPENET.K                        = []
 __C.DATASETS.SHAPENET.RGB_IMG_PATH             = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/render_%02d_l.png'
-__C.DATASETS.SHAPENET.DEPTH_IMG_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/depth_%02d_l.exr'
+__C.DATASETS.SHAPENET.DEPTH_IMG_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/disp_%02d_l.exr'
 __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetPoints/%s/%s.npy'
 
 
@@ -60,7 +61,7 @@ __C.MEMCACHED.CLIENT_CONFIG                    = '/mnt/lustre/share/memcached_cl
 __C.TRAIN                                      = edict()
 __C.TRAIN.BATCH_SIZE                           = 16
 __C.TRAIN.N_EPOCHS                             = 250
-__C.TRAIN.SAVE_FREQ_EPOCH                      = 25
+__C.TRAIN.SAVE_FREQ                            = 25
 __C.TRAIN.LEARNING_RATE                        = 1e-4
 __C.TRAIN.LR_MILESTONES                        = [150]
 __C.TRAIN.GAMMA                                = .5
@@ -73,3 +74,4 @@ __C.TRAIN.RANDOM_BG_COLOR                      = [[225, 255], [225, 255], [225, 
 #
 __C.TEST                                       = edict()
 __C.TEST.RANDOM_BG_COLOR                       = [[240, 240], [240, 240], [240, 240]]
+__C.TEST.METRIC_NAME                           = 'F-Score'
