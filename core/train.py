@@ -192,12 +192,11 @@ def train_net(cfg):
                      (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, losses.avg()))
 
         # Validate the current model
-        metrics = test_net(cfg, epoch_idx, output_dir, val_data_loader, val_writer, network)
+        metrics = test_net(cfg, epoch_idx, val_data_loader, val_writer, network)
 
         # Save ckeckpoints
-        _epoch_idx = epoch_idx + 1
-        if _epoch_idx % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
-            file_name = 'ckpt-best.pth' if metrics.better_than(best_metrics) else 'ckpt-epoch-%03d.pth' % _epoch_idx
+        if (epoch_idx + 1) % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
+            file_name = 'best-ckpt.pth' if metrics.better_than(best_metrics) else 'epoch-%03d.pth' % (epoch_idx + 1)
             output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
             torch.save({
                 'epoch_index': epoch_idx + 1,

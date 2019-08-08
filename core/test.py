@@ -19,7 +19,7 @@ from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
 
-def test_net(cfg, epoch_idx=-1, output_dir=None, test_data_loader=None, test_writer=None, network=None):
+def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network=None):
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
 
@@ -103,6 +103,14 @@ def test_net(cfg, epoch_idx=-1, output_dir=None, test_data_loader=None, test_wri
                 category_metrics[taxonomy_id] = AverageMeter(Metrics.items())
             category_metrics[taxonomy_id].update(_metrics)
 
+            if test_writer is not None and model_idx < 3:
+                pred_ptcloud = ptcloud.squeeze().cpu().numpy()
+                gt_ptcloud = data['ptcloud'].squeeze().cpu().numpy()
+                pred_ptcloud_img = utils.helpers.get_ptcloud_img(pred_ptcloud)
+                test_writer.add_image('Model%02d/Reconstructed' % model_idx, pred_ptcloud_img, epoch_idx + 1)
+                gt_ptcloud_img = utils.helpers.get_ptcloud_img(gt_ptcloud)
+                test_writer.add_image('Model%02d/GroundTruth' % model_idx, gt_ptcloud_img, epoch_idx + 1)
+
             logging.info(
                 'Test[%d/%d] Taxonomy = %s Sample = %s Loss = %.4f Metrics = %s' %
                 (model_idx + 1, n_samples, taxonomy_id, model_id, test_losses.val(), ['%.4f' % m for m in _metrics]))
@@ -128,7 +136,7 @@ def test_net(cfg, epoch_idx=-1, output_dir=None, test_data_loader=None, test_wri
     print('\n')
 
     # Add testing results to TensorBoard
-    if not test_writer is None:
+    if test_writer is not None:
         test_writer.add_scalar('Loss/Epoch', test_losses.avg(), epoch_idx + 1)
         for i, metric in enumerate(test_metrics.items):
             test_writer.add_scalar('Metric/%s' % metric, test_metrics.avg(i), epoch_idx + 1)
