@@ -38,14 +38,14 @@ def train_net(cfg):
         'parameters': None,
         'objects': ['rgb_img', 'depth_img']
     }, {
-        'callback': 'RandomPermuteRGB',
-        'parameters': None,
-        'objects': ['rgb_img']
-    }, {
         'callback': 'RandomBackground',
         'parameters': {
             'bg_color': cfg.TRAIN.RANDOM_BG_COLOR
         },
+        'objects': ['rgb_img']
+    }, {
+        'callback': 'RandomPermuteRGB',
+        'parameters': None,
         'objects': ['rgb_img']
     }, {
         'callback': 'Normalize',
