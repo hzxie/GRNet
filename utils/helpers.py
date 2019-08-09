@@ -53,6 +53,5 @@ def get_ptcloud_img(ptcloud):
 
     fig.canvas.draw()
     img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    print(img.shape)
+    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3, ))
     return img

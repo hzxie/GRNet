@@ -138,7 +138,7 @@ class RandomBackground(object):
         ]
         alpha = (np.expand_dims(img[:, :, 3], axis=2) == 0).astype(np.float32)
         img = img[:, :, :3]
-        bg_color = np.array([[[r, g, b]]])
+        bg_color = np.array([[[r, g, b]]]) / 255.
         img = alpha * bg_color + (1 - alpha) * img
 
         return img
