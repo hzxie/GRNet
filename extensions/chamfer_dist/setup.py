@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 #
-# Developed by Thibault GROUEIX <thibault.groueix.2012@polytechnique.org>
+# Developed by Haozhe Xie <cshzxie@gmail.com>
 
 from setuptools import setup
-from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+from torch.utils.cpp_extension import BuildExtension, CppExtension, CUDAExtension
 
 setup(name='chamfer',
       version='1.0.0',
       ext_modules=[
+          CppExtension('chamfer', ['chamfer.cpp']),
           CUDAExtension('chamfer', [
               'chamfer_cuda.cpp',
               'chamfer.cu',
