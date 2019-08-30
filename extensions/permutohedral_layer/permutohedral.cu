@@ -1,13 +1,18 @@
-// Copyright 2016 Max Planck Society
-// Distributed under the BSD-3 Software license,
-// (See accompanying file ../../../../LICENSE.txt or copy at
-// https://opensource.org/licenses/BSD-3-Clause)
+// Copyright 2019 Haozhe Xie and Max Planck Society
+// Distributed under the MIT Software license,
+// (See https://opensource.org/licenses/MIT)
 
-#include <ATen/ATen.h>
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <torch/torch.h>
+#include <torch/extension.h>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <iostream>
+#include <stdio.h>
 
 #include "math_utils.hpp"
 #include "permutohedral_cuda.hpp"
@@ -253,15 +258,178 @@ __global__ void splat_tick_gpu_kernel(const int in_size,
 }
 
 /************************************************/
+/***               CUDA Vector                ***/
+/************************************************/
+template <typename T>
+CUDAVector<T>::CUDAVector() : CUDAVector(32) {}
+
+template <typename T>
+CUDAVector<T>::CUDAVector(int capacity) {
+  _capacity = capacity;
+  _size     = 0;
+  cudaMalloc((void**)&_data, _capacity * sizeof(T));
+}
+
+template <typename T>
+CUDAVector<T>::~CUDAVector() {
+  cudaFree(_data);
+}
+
+template <typename T>
+void CUDAVector<T>::grow(int capacity) {
+  _capacity =
+    (capacity == -1 || capacity < _capacity) ? _capacity * 2 : capacity;
+
+  T* old_data = _data;
+  cudaMalloc((void**)&_data, _capacity * sizeof(T));
+
+  for (int i = 0; i < _size; ++i) {
+    _data[i] = old_data[i];
+  }
+  cudaFree(old_data);
+}
+
+template <typename T>
+T* CUDAVector<T>::data() const {
+  return _data;
+}
+
+template <typename T>
+int CUDAVector<T>::size() const {
+  return _size;
+}
+
+template <typename T>
+void CUDAVector<T>::resize(int size) {
+  if (size > _capacity) {
+    grow(size);
+  }
+  _size = size;
+}
+
+template <typename T>
+void CUDAVector<T>::push_back(T t) {
+  if (_size == _capacity) {
+    grow();
+  }
+  _data[_size++] = t;
+}
+
+template <typename T>
+void CUDAVector<T>::swap(CUDAVector& cv) {
+  std::swap(_capacity, cv._capacity);
+  std::swap(_size, cv._size);
+  std::swap(_data, cv._data);
+}
+
+template <typename T>
+T CUDAVector<T>::pop_back() {
+  --_size;
+  return _data[_size];
+}
+
+template <typename T>
+T* CUDAVector<T>::begin() {
+  return _data;
+}
+
+template <typename T>
+T* CUDAVector<T>::end() {
+  return _data + _size;
+}
+
+template <typename T>
+T& CUDAVector<T>::operator[](int i) {
+  return _data[i];
+}
+
+template <typename T>
+const T& CUDAVector<T>::operator[](int i) const {
+  return _data[i];
+}
+
+template <typename U>
+std::ostream& operator<<(std::ostream& os, const CUDAVector<U>& cv) {
+  std::vector<U> vec(cv._size);
+  ::gpu_memcpy(cv._size * sizeof(U), cv._data, vec.data());
+
+  os << vec;
+  return os;
+}
+
+/************************************************/
+/*** Gaussian Filter for Permutohedral Lattice **/
+/************************************************/
+
+void GaussianFilter::build_filter(const cublasHandle_t& handle) {
+  boost::array<float, 2> gauss = {{1, 0.5}};
+  const int size = get_filter_size(neighborhood_size_, feature_size_);
+  HashTable hash_table(feature_size_, size * (feature_size_ + 1));
+  std::vector<float> lattice(size + 1);
+
+  // Insert center of lattice into hash table.
+  std::vector<boost::int16_t> center(feature_size_ + 1);
+  const int center_index = hash_table.find(center.data(), true) + 1;
+  assert(center_index == 1);
+
+  // Insert all other lattice points into the hash table.
+  LatticeTraversal traversal(neighborhood_size_, feature_size_);
+  TraversalCallback yield(hash_table);
+  traversal.go(center, yield);
+
+  // Initialize the center of the lattice.
+  lattice[center_index] = 1;
+
+  std::vector<float> tmp_lattice(size + 1);
+  std::vector<boost::int16_t> walking_key_up(feature_size_ + 1);
+  std::vector<boost::int16_t> walking_key_down(feature_size_ + 1);
+  for (int d = 0; d <= feature_size_; ++d) {
+    std::fill(tmp_lattice.begin(), tmp_lattice.end(), 0);
+
+    for (int i = 0; i < size; i++) {
+      const boost::int16_t* key = hash_table.get_key(i);
+      std::copy(key, key + feature_size_ + 1, walking_key_up.begin());
+      std::copy(key, key + feature_size_ + 1, walking_key_down.begin());
+
+      float& v = tmp_lattice[i + 1];
+      v        = lattice[i + 1] * gauss[0];
+
+      for (int n = 1; n < neighborhood_size_ + 1; ++n) {
+        advance_in_dimension(d, 1, &walking_key_up);
+        advance_in_dimension(d, -1, &walking_key_down);
+
+        v += (lattice[hash_table.find(walking_key_up.data()) + 1] +
+              lattice[hash_table.find(walking_key_down.data()) + 1]) *
+             (n < gauss.size() ? gauss[n] : 0);
+      }
+    }
+
+    lattice.swap(tmp_lattice);
+    lattice[0] = 0;
+  }
+
+  filter_.resize(size);
+  // Normalize the filter according to the center lattice point. Like that we
+  // are not creating additional energy for it.
+  // const value_type alpha = lattice[1];
+  // for (int i = 0; i < size; ++i) {
+  //   filter_[i] = lattice[i + 1] / alpha;
+  // }
+  const float alpha = lattice[1];
+  ::gpu_memcpy(size * sizeof(float), lattice.data() + 1, filter_.data());
+  ::gpu_scal(handle, size, 1.0 / alpha, filter_.data());
+}
+
+/************************************************/
 /***          Permutohedral Lattice           ***/
 /************************************************/
 
-void Permutohedral::map_back(const std::vector<boost::int16_t>& key,
+void Permutohedral::map_back(const CUDAVector<boost::int16_t>& key,
                              float* const x) {
   const int d_      = key.size() - 1;
   float inv_std_dev = std::sqrt(2.0 / 3.0) * (d_ + 1);
 
-  std::vector<float> scale_factor(d_);
+  CUDAVector<float> scale_factor(d_);
   for (int i = 0; i < d_; ++i) {
     scale_factor[i] = 1.0 / std::sqrt((i + 2) * (i + 1)) * inv_std_dev;
   }
@@ -291,17 +459,16 @@ void Permutohedral::init(const float* feature,
 
   boost::shared_ptr<Lattice> lattice = boost::make_shared<Lattice>();
   // Set the read only shared lattice data
-  lattice_ = lattice;
-
+  lattice_                    = lattice;
   lattice->N_                 = N;
   lattice->d_                 = d;
   lattice->neighborhood_size_ = neighborhood_size;
 
   // Allocate enough storage
-  lattice->barycentric_.resize(static_cast<int>((d + 1) * N));
   std::vector<boost::int16_t> ranks;
   ranks.resize((d + 1) * N);
   lattice->offset_.resize((d + 1) * N);
+  lattice->barycentric_.resize((d + 1) * N);
 
   // Compute the lattice coordinates for each feature [there is going to be
   // a lot of magic here
@@ -314,24 +481,29 @@ void Permutohedral::init(const float* feature,
   std::vector<float> barycentric(d + 2);
   std::vector<boost::int16_t> canonical((d + 1) * (d + 1));
   std::vector<boost::int16_t> key(d + 1);
+  std::vector<boost::int16_t> min_key(d + 1);
+  std::vector<boost::int16_t> max_key(d + 1);
+  // lattice->offset_ CPU data
+  std::vector<int> lattice_offset((d + 1) * N);
+  // lattice->barycentric_ CPU data
+  std::vector<float> lattice_barycentric((d + 1) * N);
 
   // Compute the canonical simplex
   for (int i = 0; i <= d; i++) {
-    for (int j = 0; j <= d - i; j++) canonical[i * (d + 1) + j] = i;
-    for (int j = d - i + 1; j <= d; j++)
+    for (int j = 0; j <= d - i; j++) {
+      canonical[i * (d + 1) + j] = i;
+    }
+    for (int j = d - i + 1; j <= d; j++) {
       canonical[i * (d + 1) + j] = i - (d + 1);
+    }
   }
 
   // Expected standard deviation of our filter (p.6 in [Adams etal 2010])
   float inv_std_dev = sqrt(2.0 / 3.0) * (d + 1);
   // Compute the diagonal part of E (p.5 in [Adams etal 2010])
-  for (int i = 0; i < d; i++)
+  for (int i = 0; i < d; i++) {
     scale_factor[i] = 1.0 / sqrt((i + 2) * (i + 1)) * inv_std_dev;
-
-  const float* f = feature;
-
-  std::vector<boost::int16_t> min_key(d + 1);
-  std::vector<boost::int16_t> max_key(d + 1);
+  }
 
   // Compute the simplex each feature lies in
   for (int k = 0; k < N; k++) {
@@ -342,7 +514,7 @@ void Permutohedral::init(const float* feature,
     float sm(0);
     for (int j = d; j > 0; j--) {
       const int fIndex = (j - 1) * N + k;
-      float cf         = f[fIndex] * scale_factor[j - 1];
+      float cf         = feature[fIndex] * scale_factor[j - 1];
       elevated[j]      = sm - j * cf;
       sm += cf;
     }
@@ -395,9 +567,9 @@ void Permutohedral::init(const float* feature,
       for (int i = 0; i <= d; i++) {
         float v = (elevated[i] - rem0[i]) * down_factor;
 
-        if (d - rank[i] < 0 || d - rank[i] + 1 >= d + 2)
+        if (d - rank[i] < 0 || d - rank[i] + 1 >= d + 2) {
           throw std::runtime_error("Permutohedral: rank access error");
-
+        }
         // assert(d_-rank[i]   >= 0);
         // assert(d_-rank[i]+1 <  d_+2);
         barycentric[d - rank[i]] += v;
@@ -408,23 +580,30 @@ void Permutohedral::init(const float* feature,
     }
 
     // Compute all vertices and their offset
-    std::vector<boost::int16_t> neighborKeyUp(d + 1);
-    std::vector<boost::int16_t> neighborKeyDown(d + 1);
+    // CUDAVector<boost::int16_t> neighborKeyUp(d + 1);
+    // CUDAVector<boost::int16_t> neighborKeyDown(d + 1);
     for (int remainder = 0; remainder <= d; remainder++) {
-      for (int i = 0; i < d; i++)
+      for (int i = 0; i < d; i++) {
         key[i] = rem0[i] + canonical[remainder * (d + 1) + rank[i]];
-      assert(k * (d + 1) + remainder < (d + 1) * N);
-      lattice->offset_[k * (d + 1) + remainder] =
-        hash_table.find(key.data(), true);
-      lattice->barycentric_[k * (d + 1) + remainder] = barycentric[remainder];
-
-      // Gather the extent statistics of the lattice.
-      for (int j = 0; j < d; ++j) {
-        min_key[j] = (std::min)(key[j], min_key[j]);
-        max_key[j] = (std::max)(key[j], max_key[j]);
       }
+      assert(k * (d + 1) + remainder < (d + 1) * N);
+      // lattice->offset_[k * (d + 1) + remainder] = hash_table.find(key.data(),
+      // true);
+      lattice_offset[k * (d + 1) + remainder] =
+        hash_table.find(key.data(), true);
+      // lattice->barycentric_[k * (d + 1) + remainder] =
+      // barycentric[remainder];
+      lattice_barycentric[k * (d + 1) + remainder] = barycentric[remainder];
+      // Gather the extent statistics of the lattice.
+      // for (int j = 0; j < d; ++j) {
+      //   min_key[j] = (std::min)(key[j], min_key[j]);
+      //   max_key[j] = (std::max)(key[j], max_key[j]);
+      // }
     }
   }
+  ::gpu_memcpy((d + 1) * N * sizeof(int), lattice_offset.data(), lattice->offset_.data());
+  ::gpu_memcpy((d + 1) * N * sizeof(float), lattice_barycentric.data(),
+               lattice->barycentric_.data());
 
   // Find the Neighbors of each lattice point
   // Get the number of vertices in the lattice
@@ -432,10 +611,10 @@ void Permutohedral::init(const float* feature,
   lattice->M_ = M;
 
   // Gather some debug information.
-  std::ostringstream extent_string;
-  for (int i = 0; i < d; ++i) {
-    extent_string << (max_key[i] - min_key[i]) << ", ";
-  }
+  // std::ostringstream extent_string;
+  // for (int i = 0; i < d; ++i) {
+  //   extent_string << (max_key[i] - min_key[i]) << ", ";
+  // }
   // LOG(INFO) << "lattice size: " << M
   //           << ", samples: " << N
   //           << ", mean occupancy: " << static_cast<float>(N * (d+1)) /
@@ -445,17 +624,22 @@ void Permutohedral::init(const float* feature,
   // Create the neighborhood structure
   // blur_neighbors (filter_size-1) x M_ row-major
   const int size = get_filter_size(lattice->neighborhood_size_, d);
+  // lattice->blur_neighbors_
+  std::vector<int> lattice_blur_neighbors((size - 1) * M);
   lattice->blur_neighbors_.resize((size - 1) * M);
 
-  std::vector<boost::int16_t> start_key(d + 1);
+  // CUDAVector<boost::int16_t> start_key(d + 1);
   std::vector<boost::int16_t> walking_key(d + 1);
 
   //  extract (d+1) x M matrix of immediate neighbour indices row-major
   std::vector<int> immediate_neighbors((d + 1) * M);
   for (int i = 0; i < M; ++i) {
-    const boost::int16_t* key = hash_table.getKey(i);
+    const boost::int16_t* key = hash_table.get_key(i);
     for (int dim = 0; dim <= d; ++dim) {
       std::copy(key, key + d + 1, walking_key.begin());
+      // ::gpu_memcpy((d + 1) * sizeof(boost::int16_t), key,
+      // walking_key.begin());
+
       advance_in_dimension(dim, 1, &walking_key);
       immediate_neighbors[i + M * dim] =
         hash_table.find(walking_key.data(), false);
@@ -467,12 +651,14 @@ void Permutohedral::init(const float* feature,
   LatticeApproximateTraversal traverse(lattice->neighborhood_size_, d,
                                        immediate_neighbors, M);
   for (int i = 0; i < M; ++i) {
-    int* neighbors = &lattice->blur_neighbors_[i];
+    int* neighbors = &lattice_blur_neighbors[i];
     int n          = -1;
     NeighborhoodCallback yield(M, neighbors, &n);
     traverse.go(i, yield);
     assert(n + 1 == size);
   }
+  ::gpu_memcpy((size - 1) * M * sizeof(int), lattice_blur_neighbors.data(),
+               lattice->blur_neighbors_.data());
 }
 
 boost::shared_ptr<PermutohedralReverse> Permutohedral::compute(
@@ -531,14 +717,14 @@ void PermutohedralReverse::max_reverse(const float* diff_in,
                                        float* diff_out_in) {
   // Blob<float> sliced_out;
   // sliced_out->Reshape(1, 1, num_output_, M_);
-  at::Tensor sliced_out =
-    at::zeros({1, 1, num_output_, M_}, torch::CUDA(at::kFloat));
+  torch::Tensor sliced_out =
+    torch::zeros({1, 1, num_output_, M_}, torch::CUDA(torch::kFloat));
   slice_tick(diff_in, &sliced_out);
 
   // Blob<float> blurred_out;
   // maxxed_out->Reshape(1, 1, value_size_, M_ + 1);
-  at::Tensor blurred_out =
-    at::zeros({1, 1, value_size_, M_ + 1}, torch::CUDA(at::kFloat));
+  torch::Tensor blurred_out =
+    torch::zeros({1, 1, value_size_, M_ + 1}, torch::CUDA(torch::kFloat));
   max_tick(sliced_out, &blurred_out);
 
   // Blob<float> splatted_out;
@@ -569,23 +755,30 @@ void PermutohedralReverse::init(
   // TODO(mkiefel): this should be done in the lattice structure itself so it
   // can be actually be reused between computation calls.
   // barycentric_.Reshape(1, 1, N_, d_ + 1);
-  barycentric_ = at::zeros({1, 1, N_, d_ + 1}, torch::CUDA(at::kFloat));
+  barycentric_ = torch::zeros({1, 1, N_, d_ + 1}, torch::CUDA(torch::kFloat));
   assert(lattice->barycentric_.size() == N_ * (d_ + 1));
-  std::copy(lattice->barycentric_.begin(), lattice->barycentric_.end(),
-            barycentric_.data<float>());
+  // std::copy(lattice->barycentric_.begin(), lattice->barycentric_.end(),
+  // barycentric_.data<float>());
+  ::gpu_memcpy(lattice->barycentric_.size() * sizeof(float),
+               lattice->barycentric_.data(), barycentric_.data<float>());
 
   // offset_.Reshape(1, 1, N_, d_ + 1);
-  offset_ = at::zeros({1, 1, N_, d_ + 1}, torch::CUDA(at::kInt));
+  offset_ = torch::zeros({1, 1, N_, d_ + 1}, torch::CUDA(torch::kInt));
   assert(lattice->offset_.size() == N_ * (d_ + 1));
-  std::copy(lattice->offset_.begin(), lattice->offset_.end(),
-            offset_.data<float>());
+  // std::copy(lattice->offset_.begin(), lattice->offset_.end(),
+  // offset_.data<float>());
+  ::gpu_memcpy(lattice->offset_.size() * sizeof(int), lattice->offset_.data(),
+               offset_.data<int>());
 
   if (size > 1) {
     // blur_neighbors_.Reshape(1, 1, size - 1, M_);
-    blur_neighbors_ = at::zeros({1, 1, size - 1, M_}, torch::CUDA(at::kInt));
+    blur_neighbors_ =
+      torch::zeros({1, 1, size - 1, M_}, torch::CUDA(torch::kInt));
     assert(lattice->blur_neighbors_.size() == (size - 1) * M_);
-    std::copy(lattice->blur_neighbors_.begin(), lattice->blur_neighbors_.end(),
-              blur_neighbors_.data<float>());
+    // std::copy(lattice->blur_neighbors_.begin(),
+    // lattice->blur_neighbors_.end(), blur_neighbors_.data<float>());
+    ::gpu_memcpy(lattice->blur_neighbors_.size() * sizeof(int),
+                 lattice->blur_neighbors_.data(), blur_neighbors_.data<int>());
   }
 
   // Set the rest of the metadata.
@@ -595,8 +788,8 @@ void PermutohedralReverse::init(
   out_size_   = out_size;
 
   // filter_.Reshape(1, num_output, value_size / group, size);
-  filter_ = at::zeros({1, num_output, value_size / group, size},
-                      torch::CUDA(at::kFloat));
+  filter_ = torch::zeros({1, num_output, value_size / group, size},
+                         torch::CUDA(torch::kFloat));
   ::gpu_memcpy(filter_.numel() * sizeof(float), filter, filter_.data<float>());
 
   num_output_   = num_output;
@@ -606,14 +799,15 @@ void PermutohedralReverse::init(
 
   // splatted_.Reshape(1, 1, M_ + 1, value_size);
   // max_idx_.Reshape(1, 1, M_, value_size);
-  splatted_ = at::zeros({1, 1, M_ + 1, value_size}, torch::CUDA(at::kFloat));
-  max_idx_  = at::zeros({1, 1, M_, value_size}, torch::CUDA(at::kInt));
+  splatted_ =
+    torch::zeros({1, 1, M_ + 1, value_size}, torch::CUDA(torch::kFloat));
+  max_idx_ = torch::zeros({1, 1, M_, value_size}, torch::CUDA(torch::kInt));
 }
 
 void PermutohedralReverse::max_compute(const float* in, float* out) {
   // Blob<float> blurred_(1, 1, M_, num_output_);
-  at::Tensor blurred_ =
-    at::zeros({1, 1, M_, num_output_}, torch::CUDA(at::kFloat));
+  torch::Tensor blurred_ =
+    torch::zeros({1, 1, M_, num_output_}, torch::CUDA(torch::kFloat));
 
   splat(in, &splatted_);
 
@@ -623,9 +817,9 @@ void PermutohedralReverse::max_compute(const float* in, float* out) {
 }
 
 void PermutohedralReverse::blur(const cublasHandle_t& handle,
-                                const at::Tensor& splatted,
-                                const at::Tensor& filter,
-                                at::Tensor* blurred) const {
+                                const torch::Tensor& splatted,
+                                const torch::Tensor& filter,
+                                torch::Tensor* blurred) const {
   // filter         num_output x value_size / group x filter_size row-major
   // splatted       value_size x (M_+1)                           row-major
   // blur_neighbors filter_size x M_                              row-major
@@ -641,8 +835,8 @@ void PermutohedralReverse::blur(const cublasHandle_t& handle,
   const int chunks     = std::ceil(static_cast<double>(N) / chunk_size);
 
   // Blob<float> col_data_blob(1, 1, K, chunk_size);
-  at::Tensor col_data_blob =
-    at::zeros({1, 1, K, chunk_size}, torch::CUDA(at::kFloat));
+  torch::Tensor col_data_blob =
+    torch::zeros({1, 1, K, chunk_size}, torch::CUDA(torch::kFloat));
 
   // number of filter parameters in a group
   const int filter_offset = M * K;
@@ -675,8 +869,8 @@ void PermutohedralReverse::blur(const cublasHandle_t& handle,
 }
 
 void PermutohedralReverse::blur_tick(const cublasHandle_t& handle,
-                                     const at::Tensor& blurred_tick,
-                                     at::Tensor* blurred_out,
+                                     const torch::Tensor& blurred_tick,
+                                     torch::Tensor* blurred_out,
                                      float* filter_out) {
   // filter_        num_output x value_size / group x filter_size row-major
   // blurred_out    value_size x (M_+1)                           row-major
@@ -693,10 +887,10 @@ void PermutohedralReverse::blur_tick(const cublasHandle_t& handle,
   const int chunks     = std::ceil(static_cast<double>(N) / chunk_size);
 
   // Blob<float> col_data_blob(1, 1, K, chunk_size);
-  at::Tensor col_data_blob =
-    at::zeros({1, 1, K, chunk_size}, torch::CUDA(at::kFloat));
-  at::Tensor col_diff_blob =
-    at::zeros({1, 1, K, chunk_size}, torch::CUDA(at::kFloat));
+  torch::Tensor col_data_blob =
+    torch::zeros({1, 1, K, chunk_size}, torch::CUDA(torch::kFloat));
+  torch::Tensor col_diff_blob =
+    torch::zeros({1, 1, K, chunk_size}, torch::CUDA(torch::kFloat));
 
   // number of filter parameters in a group
   const int filter_offset = M * K;
@@ -748,14 +942,14 @@ void PermutohedralReverse::reverse(const cublasHandle_t& handle,
                                    float* diff_out_in) {
   // Blob<float> sliced_out;
   // sliced_out->Reshape(1, 1, num_output_, M_);
-  at::Tensor sliced_out =
-    at::zeros({1, 1, num_output_, M_}, torch::CUDA(at::kFloat));
+  torch::Tensor sliced_out =
+    torch::zeros({1, 1, num_output_, M_}, torch::CUDA(torch::kFloat));
   slice_tick(diff_in, &sliced_out);
 
   // Blob<float> blurred_out;
   // blurred_out.Reshape(1, 1, value_size_, M_ + 1);
-  at::Tensor blurred_out =
-    at::zeros({1, 1, value_size_, M_ + 1}, torch::CUDA(at::kFloat));
+  torch::Tensor blurred_out =
+    torch::zeros({1, 1, value_size_, M_ + 1}, torch::CUDA(torch::kFloat));
 
   if (do_skip_blur_) {
     copy_to_blurred_out_data<<<CUDA_GET_BLOCKS(value_size_),
@@ -771,8 +965,8 @@ void PermutohedralReverse::reverse(const cublasHandle_t& handle,
   splat_tick(blurred_out, diff_out_in);
 }
 
-void PermutohedralReverse::max_tick(const at::Tensor& maxxed_tick,
-                                    at::Tensor* maxxed_out) {
+void PermutohedralReverse::max_tick(const torch::Tensor& maxxed_tick,
+                                    torch::Tensor* maxxed_out) {
   // filter_       num_output x value_size / group x filter_size row-major
   // maxxed_out    value_size x (M_+1)                           row-major
   // blur_neighbors filter_size x M_                             row-major
@@ -799,8 +993,8 @@ void PermutohedralReverse::compute(const cublasHandle_t& handle,
                                    const float* in,
                                    float* out) {
   // Blob<float> blurred_(1, 1, M_, num_output_);
-  at::Tensor blurred_ =
-    at::zeros({1, 1, M_, num_output_}, torch::CUDA(at::kFloat));
+  torch::Tensor blurred_ =
+    torch::zeros({1, 1, M_, num_output_}, torch::CUDA(torch::kFloat));
 
   splat(in, &splatted_);
 
@@ -816,7 +1010,8 @@ void PermutohedralReverse::compute(const cublasHandle_t& handle,
   slice(blurred_, out);
 }
 
-void PermutohedralReverse::slice(const at::Tensor& data, float* sliced) const {
+void PermutohedralReverse::slice(const torch::Tensor& data,
+                                 float* sliced) const {
   // data           num_output x M_                               row-major
   // sliced         num_output x out_size                         row-major
   slice_gpu_kernel<<<CUDA_GET_BLOCKS(out_size_), CUDA_NUM_THREADS>>>(
@@ -826,7 +1021,8 @@ void PermutohedralReverse::slice(const at::Tensor& data, float* sliced) const {
   CUDA_POST_KERNEL_CHECK;
 }
 
-void PermutohedralReverse::splat(const float* in, at::Tensor* splatted) const {
+void PermutohedralReverse::splat(const float* in,
+                                 torch::Tensor* splatted) const {
   // in             value_size x in_size                          row-major
   // splatted       value_size x (M_+1)                           row-major
   ::gpu_memset(splatted->numel() * sizeof(float), 0, splatted->data<float>());
@@ -879,7 +1075,7 @@ void PermutohedralReverse::col2im(const float* col,
 }
 
 void PermutohedralReverse::slice_tick(const float* sliced_tick,
-                                      at::Tensor* sliced_out) const {
+                                      torch::Tensor* sliced_out) const {
   // sliced_tick        num_output x out_size row-major sliced_out num_output
   // x M_                               row-major
   slice_tick_gpu_kernel<<<CUDA_GET_BLOCKS(out_size_), CUDA_NUM_THREADS>>>(
@@ -889,7 +1085,8 @@ void PermutohedralReverse::slice_tick(const float* sliced_tick,
   CUDA_POST_KERNEL_CHECK;
 }
 
-void PermutohedralReverse::max(const at::Tensor& splatted, at::Tensor* maxxed) {
+void PermutohedralReverse::max(const torch::Tensor& splatted,
+                               torch::Tensor* maxxed) {
   // splatted       value_size x (M_+1)                           row-major
   // blur_neighbors filter_size x M_                              row-major
   // maxxed         num_output x M_                               row-major
@@ -910,7 +1107,7 @@ void PermutohedralReverse::max(const at::Tensor& splatted, at::Tensor* maxxed) {
   CUDA_POST_KERNEL_CHECK;
 }
 
-void PermutohedralReverse::splat_tick(const at::Tensor& splatted_tick,
+void PermutohedralReverse::splat_tick(const torch::Tensor& splatted_tick,
                                       float* splatted_out) {
   // Blob<float>& splatted_tick
   // splatted_tick  value_size x (M_+1)                           row-major
@@ -920,4 +1117,196 @@ void PermutohedralReverse::splat_tick(const at::Tensor& splatted_tick,
     offset_.data<int>(), barycentric_.data<float>(), splatted_out);
 
   CUDA_POST_KERNEL_CHECK;
+}
+
+boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
+  const cublasHandle_t& handle,
+  torch::Tensor& in_features,
+  torch::Tensor& out_features,
+  int neighborhood_size,
+  int feature_size,
+  bool do_visualization = false) {
+  int batch_size = in_features.size(0);
+  int in_height  = in_features.size(2);
+  int in_width   = in_features.size(3);
+  int out_height = out_features.size(2);
+  int out_width  = out_features.size(3);
+  int in_size    = in_height * in_width;
+  int out_size   = out_height * out_width;
+  int in_offset  = 0;
+  int out_offset = in_size;
+  int data_count = in_size + out_size;
+
+  GaussianFilter gauss(neighborhood_size, feature_size);
+  gauss.build_filter(handle);
+  const float* gauss_filter = gauss.filter();
+
+  boost::shared_ptr<std::vector<BlurOperation>> operations =
+    boost::make_shared<std::vector<BlurOperation>>(batch_size);
+  torch::Tensor features =
+    torch::zeros({feature_size * data_count}, torch::CUDA(torch::kFloat));
+
+  float* p_features     = features.data<float>();
+  float* p_in_features  = in_features.data<float>();
+  float* p_out_features = out_features.data<float>();
+  for (int i = 0; i < batch_size; ++i) {
+    for (int c = 0; c < feature_size; ++c) {
+      int offset = i * feature_size * data_count + c * data_count;
+      ::gpu_memcpy(in_size * sizeof(float), p_in_features + offset,
+                   p_features + c * data_count);
+      ::gpu_memcpy(out_size * sizeof(float), p_out_features + offset,
+                   p_features + c * data_count + in_size);
+    }
+
+    BlurOperation& op = (*operations)[i];
+    op.blur_.reset(new Permutohedral());
+    op.blur_->init(features.cpu().data<float>(), data_count, feature_size,
+                   neighborhood_size, do_visualization);
+    op.norm_there_ =
+      torch::ones({1, 1, in_height, in_width}, torch::CUDA(torch::kFloat));
+    op.norm_back_ =
+      torch::zeros({1, 1, out_height, out_width}, torch::CUDA(torch::kFloat));
+
+    // Note (Haozhe Xie): NormType == AFTER, NormType == SYMMETRIC is not
+    // supported yet!
+    op.blur_->compute(handle, gauss_filter, op.norm_there_.data<float>(), 1, 1,
+                      1, false, in_offset, out_offset, in_size, out_size,
+                      op.norm_back_.data<float>());
+
+    // for (int i = 0; i < op.norm_back_->count(); ++i) {
+    //   norm_back_data[i] = 1.0 / (norm_back_data[i] + 1e-20);
+    // }
+    ::gpu_mul_inverse(out_size, op.norm_back_.data<float>(),
+                      op.norm_back_.data<float>(), 1e-20);
+  }
+  return operations;
+}
+
+std::map<std::string, std::vector<torch::Tensor>> permutohedral_cuda_forward(
+  const cublasHandle_t& handle,
+  int neighborhood_size,
+  int group,
+  bool do_skip_blur,
+  bool use_bias_term,
+  torch::Tensor data,
+  torch::Tensor in_features,
+  torch::Tensor out_features,
+  torch::Tensor weights,
+  torch::Tensor bias,
+  torch::Tensor bias_multiplier) {
+  int batch_size         = data.size(0);
+  int data_channels_size = data.size(1);
+  int in_channels        = in_features.size(1);
+  int in_height          = in_features.size(2);
+  int in_width           = in_features.size(3);
+  int out_channels       = out_features.size(1);
+  int out_height         = out_features.size(2);
+  int out_width          = out_features.size(3);
+  int in_size            = in_height * in_width;
+  int out_size           = out_height * out_width;
+  int in_offset          = 0;
+  int out_offset         = in_size;
+  torch::Tensor output =
+    torch::zeros({batch_size, out_channels, out_height, out_width},
+                 torch::CUDA(torch::kFloat));
+
+  boost::shared_ptr<std::vector<BlurOperation>> blur_operations = init_lattice(
+    handle, in_features, out_features, neighborhood_size, in_channels);
+  // Note (Haozhe Xie): OffsetType == None, OffsetType == FULL and OffsetType ==
+  // DIAG are not supported yet!
+  // boost::shared_ptr<torch::Tensor> shifted_filter
+  // = get_offset_filter(weights);
+
+  torch::Tensor scaled_there = torch::zeros(
+    {1, in_channels, in_height, in_width}, torch::CUDA(torch::kFloat));
+  for (int i = 0; i < batch_size; ++i) {
+    BlurOperation& op = (*blur_operations)[i];
+
+    for (int c = 0; c < in_channels; ++c) {
+      ::gpu_mul(in_size, op.norm_there_.data<float>(),
+                data.data<float>() + i * in_channels * in_size + c * in_size,
+                scaled_there.data<float>() + c * in_size);
+    }
+
+    // Compute the permutohedral filter response
+    op.reverse_ = op.blur_->compute(
+      handle, weights.data<float>(), scaled_there.data<float>(), out_channels,
+      group, in_channels, do_skip_blur, in_offset, out_offset, in_size,
+      out_size, output.data<float>() + i * out_channels * out_size);
+
+    for (int c = 0; c < out_channels; ++c) {
+      ::gpu_mul(
+        out_size, op.norm_back_.data<float>(),
+        output.data<float>() + i * out_channels * out_size + c * out_size,
+        output.data<float>() + i * out_channels * out_size + c * out_size);
+    }
+
+    // Add bias.
+    if (use_bias_term) {
+      ::gpu_gemm(handle, CblasNoTrans, CblasNoTrans, out_channels, out_size, 1,
+                 static_cast<float>(1), bias.data<float>(),
+                 bias_multiplier.data<float>(), static_cast<float>(1.0),
+                 output.data<float>() + i * out_channels * out_size);
+    }
+  }
+
+  CUDA_POST_KERNEL_CHECK;
+
+  // Collect tensors for backward propagation
+  std::vector<torch::Tensor> norm_there;
+  std::vector<torch::Tensor> norm_back;
+  std::vector<torch::Tensor> offset;
+  std::vector<torch::Tensor> max_idx;
+  std::vector<torch::Tensor> barycentric;
+  std::vector<torch::Tensor> blur_neighbors;
+  for (int i = 0; i < batch_size; ++i) {
+    BlurOperation& op = (*blur_operations)[i];
+
+    norm_there.push_back(op.norm_there_);
+    norm_back.push_back(op.norm_back_);
+  }
+
+  return {{"output", {output}},
+          {"norm_there", norm_there},
+          {"norm_back", norm_back},
+          {"offset", offset},
+          {"max_idx", max_idx},
+          {"barycentric", barycentric},
+          {"blur_neighbors", blur_neighbors}};
+}
+
+std::map<std::string, std::vector<torch::Tensor>> permutohedral_cuda_backward(
+  const cublasHandle_t& handle,
+  bool use_bias_term,
+  torch::Tensor bias_multiplier,
+  torch::Tensor output_diff) {
+  // int batch_size         = data.size(0);
+  // int data_channels_size = data.size(1);
+  // int in_channels        = in_features.size(1);
+  // int in_height          = in_features.size(2);
+  // int in_width           = in_features.size(3);
+  // int out_channels       = out_features.size(1);
+  // int out_height         = out_features.size(2);
+  // int out_width          = out_features.size(3);
+  // int in_size            = in_height * in_width;
+  // int out_size           = out_height * out_width;
+
+  // torch::Tensor weights_diff = torch::zeros();
+  // torch::Tensor bias_diff = torch::zeros();
+  // torch::Tensor data_diff = torch::zeros();
+
+  // // Gradient with respect to bias.
+  // if (use_bias_term) {
+  //   // TODO
+  // }
+
+  // // Gradient computation.
+  // torch::Tensor scaled_back = torch::zeros(
+  //   {1, out_channels, out_height, out_width}, torch::CUDA(torch::kFloat));
+
+  // for (int i = 0; i < batch_size; ++i) {
+  //   BlurOperation& op = (*blur_operations)[i];
+
+  // CUDA_POST_KERNEL_CHECK
+  // return {};
 }

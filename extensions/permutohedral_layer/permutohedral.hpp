@@ -1,7 +1,6 @@
-// Copyright 2016 Max Planck Society
-// Distributed under the BSD-3 Software license,
-// (See accompanying file ../../../../LICENSE.txt or copy at
-// https://opensource.org/licenses/BSD-3-Clause)
+// Copyright 2019 Haozhe Xie and Max Planck Society
+// Distributed under the MIT Software license,
+// (See https://opensource.org/licenses/MIT)
 
 #ifndef PERMUTOHEDRAL_HPP
 #define PERMUTOHEDRAL_HPP

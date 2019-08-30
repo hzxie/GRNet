@@ -1,7 +1,6 @@
-// Copyright 2016 Max Planck Society
-// Distributed under the BSD-3 Software license,
-// (See accompanying file ../../../../LICENSE.txt or copy at
-// https://opensource.org/licenses/BSD-3-Clause)
+// Copyright 2019 Haozhe Xie and Max Planck Society
+// Distributed under the MIT Software license,
+// (See https://opensource.org/licenses/MIT)
 
 #ifndef PERMUTOHEDRAL_CUDA_HPP
 #define PERMUTOHEDRAL_CUDA_HPP
@@ -12,13 +11,45 @@
 #include <cstring>
 #include <vector>
 
-#include <ATen/ATen.h>
 #include <cublas_v2.h>
-#include <torch/torch.h>
+#include <torch/extension.h>
 #include <boost/array.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/shared_ptr.hpp>
+
+/************************************************/
+/***               CUDA Vector                ***/
+/************************************************/
+
+template <typename T>
+class CUDAVector {
+ private:
+  T* _data;
+  int _capacity;
+  int _size;
+
+  void grow(int capacity = -1);
+
+ public:
+  CUDAVector();
+  CUDAVector(int capacity);
+  ~CUDAVector();
+  int size() const;
+  void resize(int size);
+  void push_back(T t);
+  void swap(CUDAVector& cv);
+
+  T* data() const;
+  T pop_back();
+  T* begin();
+  T* end();
+  T& operator[](int i);
+  const T& operator[](int i) const;
+
+  template <typename U>
+  friend std::ostream& operator<<(std::ostream& os, const CUDAVector<U>& cv);
+};
 
 /************************************************/
 /***         Some Utility Functions           ***/
@@ -52,7 +83,6 @@ inline void advance_in_dimension(const int dimension,
 /************************************************/
 /***                Hash Table                ***/
 /************************************************/
-
 /*! \brief Hash Table for keeping track of lattice occupancy. Taken from
  * Krähenbühl's original DenseCRF lattice code.
  *         (http://www.philkr.net/home/densecrf)
@@ -87,7 +117,7 @@ class HashTable {
     for (int i = 0; i < old_capacity; i++)
       if (old_table[i] >= 0) {
         int e    = old_table[i];
-        size_t h = hash(old_keys + (getKey(e) - keys_)) % capacity_;
+        size_t h = hash(old_keys + (get_key(e) - keys_)) % capacity_;
         for (; table_[h] >= 0; h = h < capacity_ - 1 ? h + 1 : 0)
           ;
         table_[h] = e;
@@ -136,8 +166,9 @@ class HashTable {
       if (e == -1) {
         if (create) {
           // Insert a new key and return the new id
-          for (size_t i = 0; i < key_size_; i++)
+          for (size_t i = 0; i < key_size_; i++) {
             keys_[filled_ * key_size_ + i] = k[i];
+          }
           return table_[h] = filled_++;
         } else {
           return -1;
@@ -145,17 +176,24 @@ class HashTable {
       }
       // Check if the current key is The One
       bool good = true;
-      for (size_t i = 0; i < key_size_ && good; i++)
-        if (keys_[e * key_size_ + i] != k[i]) good = false;
-      if (good) return e;
+      for (size_t i = 0; i < key_size_ && good; i++) {
+        if (keys_[e * key_size_ + i] != k[i]) {
+          good = false;
+        }
+      }
+      if (good) {
+        return e;
+      }
       // Continue searching
-      h++;
-      if (h == capacity_) h = 0;
+      ++h;
+      if (h == capacity_) {
+        h = 0;
+      }
     }
   }
 
-  const boost::int16_t* getKey(int i) const {
-    assert(static_cast<int>(i) < filled_);
+  const boost::int16_t* get_key(int i) const {
+    assert(static_cast<std::size_t>(i) < filled_);
     return keys_ + i * key_size_;
   }
 };
@@ -227,7 +265,9 @@ class NeighborhoodCallback {
     : step_(step), neighbors_(neighbors), n_(*n) {}
 
   void operator()(const int indx) {
-    if (n_ >= 0) neighbors_[n_ * step_] = indx;
+    if (n_ >= 0) {
+      neighbors_[n_ * step_] = indx;
+    }
     ++n_;
   }
 
@@ -274,7 +314,9 @@ class LatticeApproximateTraversal {
       const int range_end = (d < d_ || has_zero) ? neighborhood_size_ + 1 : 1;
       for (int i = 0; i < range_end; ++i) {
         walk_approximate(walking, d + 1, has_zero || i == 0, yield);
-        if (walking >= 0) walking = immediate_neighbors_[walking + M_ * d];
+        if (walking >= 0) {
+          walking = immediate_neighbors_[walking + M_ * d];
+        }
       }
     } else {
       yield(start);
@@ -298,11 +340,11 @@ class LatticeApproximateTraversal {
 class GaussianFilter {
  public:
   GaussianFilter(int neighborhood_size, int feature_size)
-    : neighborhood_size_(neighborhood_size), feature_size_(feature_size) {
-    build_filter();
-  }
+    : neighborhood_size_(neighborhood_size), feature_size_(feature_size) {}
 
   const float* filter() { return filter_.data(); }
+
+  void build_filter(const cublasHandle_t& handle);
 
  private:
   class TraversalCallback {
@@ -317,68 +359,9 @@ class GaussianFilter {
     HashTable& hash_table_;
   };
 
-  void build_filter() {
-    boost::array<float, 2> gauss = {{1, 0.5}};
-
-    const int size = get_filter_size(neighborhood_size_, feature_size_);
-
-    HashTable hash_table(feature_size_, size * (feature_size_ + 1));
-
-    std::vector<float> lattice(size + 1);
-
-    // Insert center of lattice into hash table.
-    std::vector<boost::int16_t> center(feature_size_ + 1);
-    const int center_index = hash_table.find(center.data(), true) + 1;
-    assert(center_index == 1);
-
-    // Insert all other lattice points into the hash table.
-    LatticeTraversal traversal(neighborhood_size_, feature_size_);
-    TraversalCallback yield(hash_table);
-    traversal.go(center, yield);
-
-    // Initialize the center of the lattice.
-    lattice[center_index] = 1;
-
-    std::vector<float> tmp_lattice(size + 1);
-    std::vector<boost::int16_t> walking_key_up(feature_size_ + 1);
-    std::vector<boost::int16_t> walking_key_down(feature_size_ + 1);
-    for (int d = 0; d <= feature_size_; ++d) {
-      std::fill(tmp_lattice.begin(), tmp_lattice.end(), 0);
-
-      for (int i = 0; i < size; i++) {
-        const boost::int16_t* key = hash_table.getKey(i);
-        std::copy(key, key + feature_size_ + 1, walking_key_up.begin());
-        std::copy(key, key + feature_size_ + 1, walking_key_down.begin());
-
-        float& v = tmp_lattice[i + 1];
-        v        = lattice[i + 1] * gauss[0];
-
-        for (int n = 1; n < neighborhood_size_ + 1; ++n) {
-          advance_in_dimension(d, 1, &walking_key_up);
-          advance_in_dimension(d, -1, &walking_key_down);
-
-          v += (lattice[hash_table.find(walking_key_up.data()) + 1] +
-                lattice[hash_table.find(walking_key_down.data()) + 1]) *
-               (n < gauss.size() ? gauss[n] : 0);
-        }
-      }
-
-      lattice.swap(tmp_lattice);
-      lattice[0] = 0;
-    }
-
-    filter_.resize(size);
-    // Normalize the filter according to the center lattice point. Like that we
-    // are not creating additional energy for it.
-    const float alpha = lattice[1];
-    for (int i = 0; i < size; ++i) {
-      filter_[i] = lattice[i + 1] / alpha;
-    }
-  }
-
   int neighborhood_size_;
   int feature_size_;
-  std::vector<float> filter_;
+  CUDAVector<float> filter_;
 };
 
 /************************************************/
@@ -411,16 +394,16 @@ class Permutohedral {
     int N_, d_;
     int neighborhood_size_;
     int M_;
-    std::vector<float> barycentric_;
-    std::vector<int> offset_;
-    std::vector<int> blur_neighbors_;
+    CUDAVector<float> barycentric_;
+    CUDAVector<int> offset_;
+    CUDAVector<int> blur_neighbors_;
   };
 
  private:
   Permutohedral(const Permutohedral& rhs);
   boost::shared_ptr<const Lattice> lattice_;
   bool check_unique_neighbors(const int* neighbors);
-  static void map_back(const std::vector<boost::int16_t>& key, float* const x);
+  static void map_back(const CUDAVector<boost::int16_t>& key, float* const x);
 
  public:
   Permutohedral();
@@ -491,13 +474,13 @@ class PermutohedralReverse {
     const boost::shared_ptr<const typename Permutohedral::Lattice> lattice);
   void compute(const cublasHandle_t& handle, const float* in, float* out);
   void max_compute(const float* in, float* out);
-  void slice(const at::Tensor& data, float* sliced) const;
+  void slice(const torch::Tensor& data, float* sliced) const;
   void blur(const cublasHandle_t& handle,
-            const at::Tensor& splatted,
-            const at::Tensor& filter,
-            at::Tensor* blurred) const;
-  void max(const at::Tensor& splatted, at::Tensor* maxxed);
-  void splat(const float* in, at::Tensor* splatted) const;
+            const torch::Tensor& splatted,
+            const torch::Tensor& filter,
+            torch::Tensor* blurred) const;
+  void max(const torch::Tensor& splatted, torch::Tensor* maxxed);
+  void splat(const float* in, torch::Tensor* splatted) const;
   static void im2col(const float* im,
                      const int value_size,
                      const int filter_size,
@@ -514,33 +497,39 @@ class PermutohedralReverse {
                      const int end,
                      const int* blur_neighbors,
                      float* im);
-  void slice_tick(const float* sliced_tick, at::Tensor* sliced_out) const;
+  void slice_tick(const float* sliced_tick, torch::Tensor* sliced_out) const;
   void blur_tick(const cublasHandle_t& handle,
-                 const at::Tensor& blurred_tick,
-                 at::Tensor* blurred_out,
+                 const torch::Tensor& blurred_tick,
+                 torch::Tensor* blurred_out,
                  float* filter_out);
-  void max_tick(const at::Tensor& maxxed_tick, at::Tensor* maxxed_out);
-  void splat_tick(const at::Tensor& splatted_tick, float* splatted_out);
+  void max_tick(const torch::Tensor& maxxed_tick, torch::Tensor* maxxed_out);
+  void splat_tick(const torch::Tensor& splatted_tick, float* splatted_out);
 
-  at::Tensor filter_;    // Blob<T> filter_;
-  at::Tensor splatted_;  // Blob<T> splatted_;
+  torch::Tensor filter_;    // Blob<T> filter_;
+  torch::Tensor splatted_;  // Blob<T> splatted_;
 
   int d_, N_;
   int neighborhood_size_;
   int M_;
 
-  at::Tensor max_idx_;         // Blob<int> max_idx_;
-  at::Tensor barycentric_;     // Blob<T> barycentric_;
-  at::Tensor offset_;          // Blob<int> offset_;
-  at::Tensor blur_neighbors_;  // Blob<int> blur_neighbors_;
+  torch::Tensor max_idx_;         // Blob<int> max_idx_;
+  torch::Tensor barycentric_;     // Blob<T> barycentric_;
+  torch::Tensor offset_;          // Blob<int> offset_;
+  torch::Tensor blur_neighbors_;  // Blob<int> blur_neighbors_;
 
   int in_offset_, out_offset_, in_size_, out_size_;
   int num_output_, group_;
   int value_size_;
-
   bool do_skip_blur_;
 
   friend class Permutohedral;
+};
+
+struct BlurOperation {
+  boost::shared_ptr<Permutohedral> blur_;
+  boost::shared_ptr<PermutohedralReverse> reverse_;
+  torch::Tensor norm_there_;
+  torch::Tensor norm_back_;
 };
 
 #endif /* PERMUTOHEDRAL_CUDA_HPP */
