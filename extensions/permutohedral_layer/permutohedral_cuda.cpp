@@ -1,7 +1,7 @@
 // Copyright 2019 Haozhe Xie
 // Distributed under the MIT Software license,
 // (See https://opensource.org/licenses/MIT)
-// 
+//
 // References:
 // - https://github.com/pytorch/extension-cpp/blob/master/cuda/lltm_cuda.cpp
 
@@ -23,6 +23,7 @@ std::map<std::string, std::vector<torch::Tensor> > permutohedral_cuda_forward(
   const cublasHandle_t& handle,
   int neighborhood_size,
   int group,
+  int out_channels,
   bool do_skip_blur,
   bool use_bias_term,
   torch::Tensor data,
@@ -37,6 +38,7 @@ std::vector<torch::Tensor> permutohedral_cuda_backward();
 std::map<std::string, std::vector<torch::Tensor> > permutohedral_forward(
   int neighborhood_size,
   int group,
+  int out_channels,
   bool do_skip_blur,
   bool use_bias_term,
   torch::Tensor data,
@@ -54,8 +56,8 @@ std::map<std::string, std::vector<torch::Tensor> > permutohedral_forward(
   cublasHandle_t handle = at::cuda::getCurrentCUDABlasHandle();
 
   return permutohedral_cuda_forward(
-    handle, neighborhood_size, group, do_skip_blur, use_bias_term, data,
-    in_features, out_features, weights, bias, bias_multiplier);
+    handle, neighborhood_size, group, out_channels, do_skip_blur, use_bias_term,
+    data, in_features, out_features, weights, bias, bias_multiplier);
 }
 
 std::vector<torch::Tensor> permutohedral_backward() {}

@@ -346,6 +346,8 @@ class GaussianFilter {
 
   void build_filter(const cublasHandle_t& handle);
 
+  CUDAVector<float> filter_;
+
  private:
   class TraversalCallback {
    public:
@@ -361,7 +363,6 @@ class GaussianFilter {
 
   int neighborhood_size_;
   int feature_size_;
-  CUDAVector<float> filter_;
 };
 
 /************************************************/
@@ -455,6 +456,22 @@ class PermutohedralReverse {
                float* diff_out_filter,
                float* diff_out_in);
   void max_reverse(const float* diff_in, float* diff_out_in);
+
+  inline const torch::Tensor get_max_idx() {
+    return max_idx_;
+  }
+
+  inline const torch::Tensor get_barycentric() {
+    return barycentric_;
+  }
+
+  inline const torch::Tensor get_offset() {
+    return offset_;
+  }
+
+  inline const torch::Tensor get_blur_neighbors() {
+    return blur_neighbors_;
+  }
 
  private:
   // don't copy

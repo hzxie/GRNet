@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include <iostream>
 #include <stdio.h>
+#include <iostream>
 
 #include "math_utils.hpp"
 #include "permutohedral_cuda.hpp"
@@ -454,6 +454,18 @@ void Permutohedral::init(const float* feature,
                          int feature_size,
                          int neighborhood_size,
                          bool do_visualization) {
+  std::cout << "======================== feature ========================="
+            << std::endl;
+  float* f = new float[data_count * feature_size];
+  ::gpu_memcpy(data_count * feature_size * sizeof(float), feature, f);
+  for (int i = 0; i < data_count * feature_size; ++i) {
+    std::cout << f[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
+  delete[] f;
+
   const int N = data_count;
   const int d = feature_size;
 
@@ -498,12 +510,30 @@ void Permutohedral::init(const float* feature,
     }
   }
 
+  std::cout << "======================== canonical ======================="
+            << std::endl;
+  for (int i = 0; i < canonical.size(); ++i) {
+    std::cout << canonical[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
+
   // Expected standard deviation of our filter (p.6 in [Adams etal 2010])
   float inv_std_dev = sqrt(2.0 / 3.0) * (d + 1);
   // Compute the diagonal part of E (p.5 in [Adams etal 2010])
   for (int i = 0; i < d; i++) {
     scale_factor[i] = 1.0 / sqrt((i + 2) * (i + 1)) * inv_std_dev;
   }
+
+  std::cout << "====================== scale_factor ======================"
+            << std::endl;
+  for (int i = 0; i < scale_factor.size(); ++i) {
+    std::cout << scale_factor[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
 
   // Compute the simplex each feature lies in
   for (int k = 0; k < N; k++) {
@@ -601,9 +631,24 @@ void Permutohedral::init(const float* feature,
       // }
     }
   }
-  ::gpu_memcpy((d + 1) * N * sizeof(int), lattice_offset.data(), lattice->offset_.data());
+  ::gpu_memcpy((d + 1) * N * sizeof(int), lattice_offset.data(),
+               lattice->offset_.data());
   ::gpu_memcpy((d + 1) * N * sizeof(float), lattice_barycentric.data(),
                lattice->barycentric_.data());
+
+  std::cout << "lattice_offset.size() = " << lattice_offset.size() << std::endl
+            << "lattice_offset = ";
+  for (int i = 0; i < lattice_offset.size(); ++i) {
+    std::cout << lattice_offset[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "lattice_barycentric.size() = " << lattice_barycentric.size()
+            << std::endl
+            << "lattice_barycentric = ";
+  for (int i = 0; i < lattice_barycentric.size(); ++i) {
+    std::cout << lattice_barycentric[i] << " ";
+  }
+  std::cout << std::endl;
 
   // Find the Neighbors of each lattice point
   // Get the number of vertices in the lattice
@@ -682,7 +727,45 @@ boost::shared_ptr<PermutohedralReverse> Permutohedral::compute(
 
   reverse_operation->init(filter, num_output, group, value_size, do_skip_blur,
                           in_offset, out_offset, in_size, out_size, lattice_);
+
+  float* p_in  = new float[in_size];
+  float* p_out = new float[out_size];
+  ::gpu_memcpy(in_size * sizeof(float), in, p_in);
+  ::gpu_memcpy(out_size * sizeof(float), out, p_out);
+
+  std::cout << "================= Permutohedral::compute ================="
+            << std::endl;
+  std::cout << "num_output = " << num_output << std::endl
+            << "group = " << group << std::endl
+            << "value_size = " << value_size << std::endl
+            << "in_offset = " << in_offset << std::endl
+            << "out_offset = " << out_offset << std::endl
+            << "in_size = " << in_size << std::endl
+            << "out_size = " << out_size << std::endl
+            << "in = ";
+  for (int i = 0; i < in_size; ++i) {
+    std::cout << p_in[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "out (before compute) = ";
+  for (int i = 0; i < out_size; ++i) {
+    std::cout << p_out[i] << " ";
+  }
+  std::cout << std::endl;
+
   reverse_operation->compute(handle, in, out);
+
+  ::gpu_memcpy(out_size * sizeof(float), out, p_out);
+  std::cout << "out (after compute) = ";
+  for (int i = 0; i < out_size; ++i) {
+    std::cout << p_out[i] << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
+
+  delete[] p_in;
+  delete[] p_out;
 
   return reverse_operation;
 }
@@ -749,6 +832,15 @@ void PermutohedralReverse::init(
   neighborhood_size_ = lattice->neighborhood_size_;
   M_                 = lattice->M_;
 
+  std::cout << "======================== Lattice ========================="
+            << std::endl;
+  std::cout << "d_ = " << d_ << std::endl
+            << "N_ = " << N_ << std::endl
+            << "neighborhood_size_ = " << neighborhood_size_ << std::endl
+            << "M_ = " << M_ << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
+
   const int size = get_filter_size(neighborhood_size_, d_);
 
   // Get the lattice data over to the card.
@@ -801,6 +893,9 @@ void PermutohedralReverse::init(
   // max_idx_.Reshape(1, 1, M_, value_size);
   splatted_ =
     torch::zeros({1, 1, M_ + 1, value_size}, torch::CUDA(torch::kFloat));
+  std::cout << "(M_+1) * value_size = " << (M_ + 1) * value_size << std::endl
+            << "(M_+1) = " << M_ + 1 << std::endl;
+
   max_idx_ = torch::zeros({1, 1, M_, value_size}, torch::CUDA(torch::kInt));
 }
 
@@ -996,7 +1091,19 @@ void PermutohedralReverse::compute(const cublasHandle_t& handle,
   torch::Tensor blurred_ =
     torch::zeros({1, 1, M_, num_output_}, torch::CUDA(torch::kFloat));
 
+  std::cout << "================== splatted_ (bcompute) =================="
+            << std::endl;
+  std::cout << splatted_ << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
+
   splat(in, &splatted_);
+
+  std::cout << "================== splatted_ (acompute) =================="
+            << std::endl;
+  std::cout << splatted_ << std::endl;
+  std::cout << "=========================================================="
+            << std::endl;
 
   if (do_skip_blur_) {
     copy_to_blur_data<<<CUDA_GET_BLOCKS(num_output_), CUDA_NUM_THREADS>>>(
@@ -1137,6 +1244,8 @@ boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
   int out_offset = in_size;
   int data_count = in_size + out_size;
 
+  std::cout << "feature_size = " << feature_size << std::endl;
+
   GaussianFilter gauss(neighborhood_size, feature_size);
   gauss.build_filter(handle);
   const float* gauss_filter = gauss.filter();
@@ -1149,12 +1258,14 @@ boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
   float* p_features     = features.data<float>();
   float* p_in_features  = in_features.data<float>();
   float* p_out_features = out_features.data<float>();
+
   for (int i = 0; i < batch_size; ++i) {
     for (int c = 0; c < feature_size; ++c) {
-      int offset = i * feature_size * data_count + c * data_count;
-      ::gpu_memcpy(in_size * sizeof(float), p_in_features + offset,
+      int in_offset  = i * feature_size * in_size + c * in_size;
+      int out_offset = i * feature_size * out_size + c * out_size;
+      ::gpu_memcpy(in_size * sizeof(float), p_in_features + in_offset,
                    p_features + c * data_count);
-      ::gpu_memcpy(out_size * sizeof(float), p_out_features + offset,
+      ::gpu_memcpy(out_size * sizeof(float), p_out_features + out_offset,
                    p_features + c * data_count + in_size);
     }
 
@@ -1169,9 +1280,17 @@ boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
 
     // Note (Haozhe Xie): NormType == AFTER, NormType == SYMMETRIC is not
     // supported yet!
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!
+    // TODO: Make gauss.filter_ private
+    std::cout << "gauss_filter = " << gauss.filter_ << std::endl;
+
     op.blur_->compute(handle, gauss_filter, op.norm_there_.data<float>(), 1, 1,
                       1, false, in_offset, out_offset, in_size, out_size,
                       op.norm_back_.data<float>());
+
+    std::cout << "op.norm_back_ before inverse = " << op.norm_back_
+              << std::endl;
 
     // for (int i = 0; i < op.norm_back_->count(); ++i) {
     //   norm_back_data[i] = 1.0 / (norm_back_data[i] + 1e-20);
@@ -1186,6 +1305,7 @@ std::map<std::string, std::vector<torch::Tensor>> permutohedral_cuda_forward(
   const cublasHandle_t& handle,
   int neighborhood_size,
   int group,
+  int out_channels,
   bool do_skip_blur,
   bool use_bias_term,
   torch::Tensor data,
@@ -1199,19 +1319,26 @@ std::map<std::string, std::vector<torch::Tensor>> permutohedral_cuda_forward(
   int in_channels        = in_features.size(1);
   int in_height          = in_features.size(2);
   int in_width           = in_features.size(3);
-  int out_channels       = out_features.size(1);
   int out_height         = out_features.size(2);
   int out_width          = out_features.size(3);
   int in_size            = in_height * in_width;
   int out_size           = out_height * out_width;
   int in_offset          = 0;
   int out_offset         = in_size;
+
+  std::cout << "out_channels = " << out_channels << std::endl;
+
   torch::Tensor output =
     torch::zeros({batch_size, out_channels, out_height, out_width},
                  torch::CUDA(torch::kFloat));
 
   boost::shared_ptr<std::vector<BlurOperation>> blur_operations = init_lattice(
     handle, in_features, out_features, neighborhood_size, in_channels);
+
+  std::cout << "norm_back = " << (*blur_operations)[0].norm_back_ << std::endl;
+  std::cout << "norm_there = " << (*blur_operations)[0].norm_there_
+            << std::endl;
+
   // Note (Haozhe Xie): OffsetType == None, OffsetType == FULL and OffsetType ==
   // DIAG are not supported yet!
   // boost::shared_ptr<torch::Tensor> shifted_filter
@@ -1227,6 +1354,8 @@ std::map<std::string, std::vector<torch::Tensor>> permutohedral_cuda_forward(
                 data.data<float>() + i * in_channels * in_size + c * in_size,
                 scaled_there.data<float>() + c * in_size);
     }
+
+    std::cout << "scaled_there = " << scaled_there << std::endl;
 
     // Compute the permutohedral filter response
     op.reverse_ = op.blur_->compute(
@@ -1264,6 +1393,10 @@ std::map<std::string, std::vector<torch::Tensor>> permutohedral_cuda_forward(
 
     norm_there.push_back(op.norm_there_);
     norm_back.push_back(op.norm_back_);
+    offset.push_back(op.reverse_->get_offset());
+    max_idx.push_back(op.reverse_->get_max_idx());
+    barycentric.push_back(op.reverse_->get_barycentric());
+    blur_neighbors.push_back(op.reverse_->get_blur_neighbors());
   }
 
   return {{"output", {output}},
