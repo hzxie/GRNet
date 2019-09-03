@@ -1,6 +1,10 @@
-// Copyright 2019 Haozhe Xie and Max Planck Society
-// Distributed under the MIT Software license,
-// (See https://opensource.org/licenses/MIT)
+/*
+ * @Author: Haozhe Xie
+ * @Date:   2019-08-30 10:01:53
+ * @Last Modified by:   Haozhe Xie
+ * @Last Modified time: 2019-09-03 10:04:35
+ * @Email:  cshzxie@gmail.com
+ */
 
 #ifndef PERMUTOHEDRAL_HPP
 #define PERMUTOHEDRAL_HPP

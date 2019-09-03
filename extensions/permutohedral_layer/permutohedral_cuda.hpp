@@ -1,6 +1,10 @@
-// Copyright 2019 Haozhe Xie and Max Planck Society
-// Distributed under the MIT Software license,
-// (See https://opensource.org/licenses/MIT)
+/*
+ * @Author: Haozhe Xie
+ * @Date:   2019-08-30 10:01:53
+ * @Last Modified by:   Haozhe Xie
+ * @Last Modified time: 2019-09-03 19:03:55
+ * @Email:  cshzxie@gmail.com
+ */
 
 #ifndef PERMUTOHEDRAL_CUDA_HPP
 #define PERMUTOHEDRAL_CUDA_HPP
@@ -346,8 +350,6 @@ class GaussianFilter {
 
   void build_filter(const cublasHandle_t& handle);
 
-  CUDAVector<float> filter_;
-
  private:
   class TraversalCallback {
    public:
@@ -363,6 +365,7 @@ class GaussianFilter {
 
   int neighborhood_size_;
   int feature_size_;
+  CUDAVector<float> filter_;
 };
 
 /************************************************/
@@ -451,27 +454,68 @@ class Permutohedral {
 
 class PermutohedralReverse {
  public:
+  PermutohedralReverse(const torch::Tensor constants,
+                       const torch::Tensor filter,
+                       const torch::Tensor splatted,
+                       const torch::Tensor max_idx,
+                       const torch::Tensor barycentric,
+                       const torch::Tensor offset,
+                       const torch::Tensor blur_neighbors) {
+    auto _constants    = constants.accessor<int, 1>();
+    filter_            = filter;
+    splatted_          = splatted;
+    max_idx_           = max_idx;
+    barycentric_       = barycentric;
+    offset_            = offset;
+    blur_neighbors_    = blur_neighbors;
+    d_                 = _constants[0];
+    N_                 = _constants[1];
+    neighborhood_size_ = _constants[2];
+    M_                 = _constants[3];
+    in_offset_         = _constants[4];
+    out_offset_        = _constants[5];
+    in_size_           = _constants[6];
+    out_size_          = _constants[7];
+    num_output_        = _constants[8];
+    group_             = _constants[9];
+    value_size_        = _constants[10];
+    do_skip_blur_      = _constants[11];
+  }
+
+  inline const torch::Tensor get_constants() {
+    torch::Tensor constants = torch::zeros(12, torch::kInt);
+    constants[0]            = d_;
+    constants[1]            = N_;
+    constants[2]            = neighborhood_size_;
+    constants[3]            = M_;
+    constants[4]            = in_offset_;
+    constants[5]            = out_offset_;
+    constants[6]            = in_size_;
+    constants[7]            = out_size_;
+    constants[8]            = num_output_;
+    constants[9]            = group_;
+    constants[10]           = value_size_;
+    constants[11]           = do_skip_blur_;
+    return constants;
+  }
+
+  inline const torch::Tensor get_filter() { return filter_; }
+
+  inline const torch::Tensor get_splatted() { return splatted_; }
+
+  inline const torch::Tensor get_max_idx() { return max_idx_; }
+
+  inline const torch::Tensor get_barycentric() { return barycentric_; }
+
+  inline const torch::Tensor get_offset() { return offset_; }
+
+  inline const torch::Tensor get_blur_neighbors() { return blur_neighbors_; }
+
   void reverse(const cublasHandle_t& handle,
                const float* diff_in,
                float* diff_out_filter,
                float* diff_out_in);
   void max_reverse(const float* diff_in, float* diff_out_in);
-
-  inline const torch::Tensor get_max_idx() {
-    return max_idx_;
-  }
-
-  inline const torch::Tensor get_barycentric() {
-    return barycentric_;
-  }
-
-  inline const torch::Tensor get_offset() {
-    return offset_;
-  }
-
-  inline const torch::Tensor get_blur_neighbors() {
-    return blur_neighbors_;
-  }
 
  private:
   // don't copy
@@ -522,22 +566,20 @@ class PermutohedralReverse {
   void max_tick(const torch::Tensor& maxxed_tick, torch::Tensor* maxxed_out);
   void splat_tick(const torch::Tensor& splatted_tick, float* splatted_out);
 
-  torch::Tensor filter_;    // Blob<T> filter_;
-  torch::Tensor splatted_;  // Blob<T> splatted_;
-
   int d_, N_;
   int neighborhood_size_;
   int M_;
-
-  torch::Tensor max_idx_;         // Blob<int> max_idx_;
-  torch::Tensor barycentric_;     // Blob<T> barycentric_;
-  torch::Tensor offset_;          // Blob<int> offset_;
-  torch::Tensor blur_neighbors_;  // Blob<int> blur_neighbors_;
-
   int in_offset_, out_offset_, in_size_, out_size_;
   int num_output_, group_;
   int value_size_;
   bool do_skip_blur_;
+
+  torch::Tensor filter_;          // Blob<T> filter_;
+  torch::Tensor splatted_;        // Blob<T> splatted_;
+  torch::Tensor max_idx_;         // Blob<int> max_idx_;
+  torch::Tensor barycentric_;     // Blob<T> barycentric_;
+  torch::Tensor offset_;          // Blob<int> offset_;
+  torch::Tensor blur_neighbors_;  // Blob<int> blur_neighbors_;
 
   friend class Permutohedral;
 };

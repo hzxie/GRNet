@@ -1,9 +1,10 @@
-// Copyright 2019 Haozhe Xie
-// Distributed under the MIT Software license,
-// (See https://opensource.org/licenses/MIT)
-//
-// References:
-// - https://github.com/pytorch/extension-cpp/blob/master/cuda/lltm_cuda.cpp
+/*
+ * @Author: Haozhe Xie
+ * @Date:   2019-08-30 10:01:53
+ * @Last Modified by:   Haozhe Xie
+ * @Last Modified time: 2019-09-03 17:56:27
+ * @Email:  cshzxie@gmail.com
+ */
 
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/extension.h>
@@ -19,13 +20,12 @@
   CHECK_CUDA(x);       \
   CHECK_CONTIGUOUS(x)
 
-std::map<std::string, std::vector<torch::Tensor> > permutohedral_cuda_forward(
+std::vector<torch::Tensor> permutohedral_cuda_forward(
   const cublasHandle_t& handle,
   int neighborhood_size,
   int group,
   int out_channels,
   bool do_skip_blur,
-  bool use_bias_term,
   torch::Tensor data,
   torch::Tensor in_features,
   torch::Tensor out_features,
@@ -33,14 +33,20 @@ std::map<std::string, std::vector<torch::Tensor> > permutohedral_cuda_forward(
   torch::Tensor bias,
   torch::Tensor bias_multiplier);
 
-std::vector<torch::Tensor> permutohedral_cuda_backward();
+std::vector<torch::Tensor> permutohedral_cuda_backward(
+  const cublasHandle_t& handle,
+  const torch::Tensor bias_multiplier,
+  const torch::Tensor output_grad,
+  torch::Tensor grad_weights,
+  torch::Tensor grad_bias,
+  torch::Tensor grad_data,
+  std::vector<torch::Tensor> saved_tensors);
 
-std::map<std::string, std::vector<torch::Tensor> > permutohedral_forward(
+std::vector<torch::Tensor> permutohedral_forward(
   int neighborhood_size,
   int group,
   int out_channels,
   bool do_skip_blur,
-  bool use_bias_term,
   torch::Tensor data,
   torch::Tensor in_features,
   torch::Tensor out_features,
@@ -52,15 +58,41 @@ std::map<std::string, std::vector<torch::Tensor> > permutohedral_forward(
   CHECK_INPUT(out_features);
   CHECK_INPUT(weights);
   CHECK_INPUT(bias);
-  CHECK_INPUT(bias_multiplier)
-  cublasHandle_t handle = at::cuda::getCurrentCUDABlasHandle();
+  CHECK_INPUT(bias_multiplier);
 
+  cublasHandle_t handle = at::cuda::getCurrentCUDABlasHandle();
   return permutohedral_cuda_forward(
-    handle, neighborhood_size, group, out_channels, do_skip_blur, use_bias_term,
-    data, in_features, out_features, weights, bias, bias_multiplier);
+    handle, neighborhood_size, group, out_channels, do_skip_blur, data,
+    in_features, out_features, weights, bias, bias_multiplier);
 }
 
-std::vector<torch::Tensor> permutohedral_backward() {}
+std::vector<torch::Tensor> permutohedral_backward(
+  const torch::Tensor bias_multiplier,
+  const torch::Tensor grad_output,
+  torch::Tensor grad_weights,
+  torch::Tensor grad_bias,
+  torch::Tensor grad_data,
+  std::vector<torch::Tensor> saved_tensors) {
+  const int N_TENSORS = 9;
+
+  CHECK_INPUT(bias_multiplier);
+  CHECK_INPUT(grad_output);
+  CHECK_INPUT(grad_weights);
+  CHECK_INPUT(grad_bias);
+  CHECK_INPUT(grad_data);
+  for (size_t i = 0; i < saved_tensors.size(); ++i) {
+    if (i % N_TENSORS == 2) {
+      // Skip the tensor for constants
+      continue;
+    }
+    CHECK_INPUT(saved_tensors.at(i));
+  }
+
+  cublasHandle_t handle = at::cuda::getCurrentCUDABlasHandle();
+  return permutohedral_cuda_backward(handle, bias_multiplier, grad_output,
+                                     grad_weights, grad_bias, grad_data,
+                                     saved_tensors);
+}
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("forward", &permutohedral_forward, "Permutohedral forward (CUDA)");
