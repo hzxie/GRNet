@@ -1,6 +1,10 @@
-// Copyright 2019 Haozhe Xie and Max Planck Society
-// Distributed under the MIT Software license,
-// (See https://opensource.org/licenses/MIT)
+/*
+ * @Author: Haozhe Xie
+ * @Date:   2019-08-30 10:01:53
+ * @Last Modified by:   Haozhe Xie
+ * @Last Modified time: 2019-09-03 16:29:45
+ * @Email:  cshzxie@gmail.com
+ */
 
 #include "math_utils.hpp"
 
@@ -127,4 +131,19 @@ void gpu_gemm_ex(const cublasHandle_t& handle,
 
   CUBLAS_CHECK(cublasSgemm(handle, cuTransB, cuTransA, N, M, K, &alpha, B, ldb,
                            A, lda, &beta, C, ldc));
+}
+
+void gpu_gemv(const cublasHandle_t& handle,
+              const CBLAS_TRANSPOSE TransA,
+              const int M,
+              const int N,
+              const float alpha,
+              const float* A,
+              const float* x,
+              const float beta,
+              float* y) {
+  cublasOperation_t cuTransA =
+    (TransA == CblasNoTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  CUBLAS_CHECK(
+    cublasSgemv(handle, cuTransA, N, M, &alpha, A, N, x, 1, &beta, y, 1));
 }

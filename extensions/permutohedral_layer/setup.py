@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-08-30 10:01:53
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-03 10:03:24
+# @Email:  cshzxie@gmail.com
 
 from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension

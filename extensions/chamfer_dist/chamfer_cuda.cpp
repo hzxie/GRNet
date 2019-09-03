@@ -1,3 +1,11 @@
+/*
+ * @Author: Haozhe Xie
+ * @Date:   2019-08-07 20:54:24
+ * @Last Modified by:   Haozhe Xie
+ * @Last Modified time: 2019-09-03 10:02:19
+ * @Email:  cshzxie@gmail.com
+ */
+
 #include <ATen/ATen.h>
 #include <torch/extension.h>
 

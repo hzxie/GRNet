@@ -1,6 +1,10 @@
-// Copyright 2019 Haozhe Xie and Max Planck Society
-// Distributed under the MIT Software license,
-// (See https://opensource.org/licenses/MIT)
+/*
+ * @Author: Haozhe Xie
+ * @Date:   2019-08-30 10:01:53
+ * @Last Modified by:   Haozhe Xie
+ * @Last Modified time: 2019-09-03 16:30:03
+ * @Email:  cshzxie@gmail.com
+ */
 
 #ifndef MATH_UTILS_HPP
 #define MATH_UTILS_HPP
@@ -97,5 +101,15 @@ void gpu_gemm_ex(const cublasHandle_t& handle,
                  const float beta,
                  float* C,
                  const int ldc);
+
+void gpu_gemv(const cublasHandle_t& handle,
+              const CBLAS_TRANSPOSE TransA,
+              const int M,
+              const int N,
+              const float alpha,
+              const float* A,
+              const float* x,
+              const float beta,
+              float* y);
 
 #endif /* MATH_UTILS_HPP */
