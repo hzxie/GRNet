@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-09-03 09:28:46
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-09-03 18:00:53
+ * @Last Modified time: 2019-09-04 16:01:45
  * @Email:  cshzxie@gmail.com
  */
 
@@ -1170,6 +1170,7 @@ boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
 
     BlurOperation& op = (*operations)[i];
     op.blur_.reset(new Permutohedral());
+
     op.blur_->init(features.cpu().data<float>(), data_count, feature_size,
                    neighborhood_size, do_visualization);
     op.norm_there_ =
@@ -1234,7 +1235,7 @@ std::vector<torch::Tensor> permutohedral_cuda_forward(
     BlurOperation& op = (*blur_operations)[i];
     for (int c = 0; c < data_channels; ++c) {
       ::gpu_mul(in_size, op.norm_there_.data<float>(),
-                data.data<float>() + i * in_channels * in_size + c * in_size,
+                data.data<float>() + i * data_channels * in_size + c * in_size,
                 scaled_there.data<float>() + c * in_size);
     }
 
