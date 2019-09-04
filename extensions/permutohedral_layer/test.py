@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-30 10:01:53
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-04 00:08:20
+# @Last Modified time: 2019-09-04 10:11:52
 # @Email:  cshzxie@gmail.com
 
 import numpy as np
@@ -222,9 +222,34 @@ class PermutohedralLayerTest(unittest.TestCase):
                                                                  self.features1.cuda()).view(-1)
         output.sum().backward()
 
-        print('weights.grad', weights.grad)
-        print('bias.grad', bias.grad)
-        print('data1.grad', self.data1.grad)
+        expected_weights_grad = [
+            4.02864, 1.9967, 0.00377635, 0, 1.30078, 2.49957, 0.376468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.34393, 1.17116,
+            0.01726, 0, 0.650069, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.649555, -0.771756, -0.0255059, 0,
+            0.455789, -0.632493, -0.115808, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.323614, -0.497247, -0.116576, 0, 0.44479, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+        expected_bias_grad = [16.3156, 16.3156]
+        expected_data_grad = [
+            1.36473, 1.26829, 1.17185, 1.07541, 0.978968, 0.882527, 1.3205, 1.25828, 1.16184, 1.0654, 0.968961,
+            0.83203, 1.27626, 1.23911, 1.15184, 1.0554, 0.948105, 0.781534, 1.23202, 1.19487, 1.14183, 1.04539,
+            0.897608, 0.731037, 1.18779, 1.15063, 1.11348, 1.01368, 0.847112, 0.680541, 0.491549, 0.526269, 0.560989,
+            0.595709, 0.63043, 0.66515, 0.546521, 0.58008, 0.6148, 0.64952, 0.68424, 0.644144, 0.601493, 0.634202,
+            0.668611, 0.703331, 0.718004, 0.623138, 0.656465, 0.689174, 0.722421, 0.757142, 0.696998, 0.602132,
+            0.711437, 0.744146, 0.776855, 0.770858, 0.675992, 0.581126
+        ]
+
+        actual_weights_grad = weights.grad.clone().view(-1)
+        actual_bias_grad = bias.grad.clone().view(-1)
+        actual_data_grad = self.data1.grad.clone().view(-1)
+
+        for i in range(len(expected_weights_grad)):
+            assert abs(expected_weights_grad[i] - actual_weights_grad[i].item()) < 1e-5
+
+        for i in range(len(expected_bias_grad)):
+            assert abs(expected_bias_grad[i] - actual_bias_grad[i].item()) < 1e-5
+
+        for i in range(len(expected_data_grad)):
+            assert abs(expected_data_grad[i] - actual_data_grad[i].item()) < 1e-5
 
 
 if __name__ == '__main__':
