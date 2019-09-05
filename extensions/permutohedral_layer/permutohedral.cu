@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-09-03 09:28:46
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-09-04 16:01:45
+ * @Last Modified time: 2019-09-05 11:39:19
  * @Email:  cshzxie@gmail.com
  */
 
@@ -89,7 +89,9 @@ __global__ void slice_gpu_kernel(const int out_size,
                                  const float* barycentric,
                                  float* sliced) {
   CUDA_KERNEL_LOOP(i, out_size) {
-    for (int k = 0; k < num_output; k++) sliced[k * out_size + i] = 0;
+    for (int k = 0; k < num_output; k++) {
+      sliced[k * out_size + i] = 0;
+    }
 
     for (int j = 0; j <= d; j++) {
       int o   = offset[(out_offset + i) * (d + 1) + j];
@@ -687,7 +689,6 @@ boost::shared_ptr<PermutohedralReverse> Permutohedral::compute(
   // TODO(mkiefel): probably move to some kind of constructor or init.
   boost::shared_ptr<PermutohedralReverse> reverse_operation(
     new PermutohedralReverse());
-
   reverse_operation->init(filter, num_output, group, value_size, do_skip_blur,
                           in_offset, out_offset, in_size, out_size, lattice_);
   reverse_operation->compute(handle, in, out);
@@ -709,7 +710,6 @@ boost::shared_ptr<PermutohedralReverse> Permutohedral::max_compute(
   // TODO(mkiefel): probably move to some kind of constructor or init.
   boost::shared_ptr<PermutohedralReverse> reverse_operation(
     new PermutohedralReverse());
-
   reverse_operation->init(filter, value_size, value_size, value_size, false,
                           in_offset, out_offset, in_size, out_size, lattice_);
   reverse_operation->max_compute(in, out);
@@ -787,6 +787,9 @@ void PermutohedralReverse::init(
     // lattice->blur_neighbors_.end(), blur_neighbors_.data<float>());
     ::gpu_memcpy(lattice->blur_neighbors_.size() * sizeof(int),
                  lattice->blur_neighbors_.data(), blur_neighbors_.data<int>());
+  } else {
+    // Placeholder tensor for do_skip_blur == true
+    blur_neighbors_ = torch::zeros(0, torch::CUDA(torch::kInt));
   }
 
   // Set the rest of the metadata.
@@ -851,7 +854,7 @@ void PermutohedralReverse::blur(const cublasHandle_t& handle,
   // number of values in an output region / column
   const int top_offset = M * N;
 
-  const int* blur_neighbors = 0;
+  const int* blur_neighbors = nullptr;
   if (size > 1) {
     blur_neighbors = blur_neighbors_.data<int>();
   }
@@ -905,7 +908,7 @@ void PermutohedralReverse::blur_tick(const cublasHandle_t& handle,
   // number of values in an output region / column
   const int top_offset = M * N;
 
-  const int* blur_neighbors = 0;
+  const int* blur_neighbors = nullptr;
   if (size > 1) {
     blur_neighbors = blur_neighbors_.data<int>();
   }
@@ -983,7 +986,7 @@ void PermutohedralReverse::max_tick(const torch::Tensor& maxxed_tick,
 
   const int filter_size = get_filter_size(neighborhood_size_, d_);
 
-  const int* blur_neighbors = 0;
+  const int* blur_neighbors = nullptr;
   if (filter_size > 1) {
     blur_neighbors = blur_neighbors_.data<int>();
   }
@@ -1103,7 +1106,7 @@ void PermutohedralReverse::max(const torch::Tensor& splatted,
   const float* splat_data = splatted.data<float>();
   float* max_data         = maxxed->data<float>();
 
-  const int* blur_neighbors = 0;
+  const int* blur_neighbors = nullptr;
   if (filter_size > 1) {
     blur_neighbors = blur_neighbors_.data<int>();
   }
@@ -1170,7 +1173,6 @@ boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
 
     BlurOperation& op = (*operations)[i];
     op.blur_.reset(new Permutohedral());
-
     op.blur_->init(features.cpu().data<float>(), data_count, feature_size,
                    neighborhood_size, do_visualization);
     op.norm_there_ =
