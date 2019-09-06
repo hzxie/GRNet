@@ -3,6 +3,7 @@
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
 import cv2
+import h5py
 import logging
 import numpy as np
 import pyexr
@@ -29,6 +30,8 @@ class IO:
             return cls._read_npy(mc_client, file_path)
         elif file_extension in ['.exr']:
             return cls._read_exr(mc_client, file_path)
+        elif file_extension in ['.h5', '.hdf5']:
+            return cls._read_hdf5(mc_client, file_path)
         else:
             raise Exception('Unsupported file extension: %s' % file_extension)
 
@@ -67,3 +70,8 @@ class IO:
     @classmethod
     def _read_exr(cls, mc_client, file_path):
         return 1.0 / pyexr.open(file_path).get("Depth.Z").astype(np.float32)
+
+    @classmethod
+    def _read_hdf5(cls, mc_client, file_path):
+        f = h5py.File(file_path, 'r')
+        return f['data'][()]
