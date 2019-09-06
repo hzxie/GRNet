@@ -25,70 +25,10 @@ def train_net(cfg):
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
 
-    # Set up data augmentation
-    train_transforms = utils.data_transforms.Compose([{
-        'callback': 'RandomCrop',
-        'parameters': {
-            'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
-            'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
-        },
-        'objects': ['rgb_img', 'depth_img']
-    }, {
-        'callback': 'RandomFlip',
-        'parameters': None,
-        'objects': ['rgb_img', 'depth_img']
-    }, {
-        'callback': 'RandomBackground',
-        'parameters': {
-            'bg_color': cfg.TRAIN.RANDOM_BG_COLOR
-        },
-        'objects': ['rgb_img']
-    }, {
-        'callback': 'RandomPermuteRGB',
-        'parameters': None,
-        'objects': ['rgb_img']
-    }, {
-        'callback': 'Normalize',
-        'parameters': {
-            'mean': cfg.CONST.DATASET_MEAN,
-            'std': cfg.CONST.DATASET_STD
-        },
-        'objects': ['rgb_img']
-    }, {
-        'callback': 'ToTensor',
-        'parameters': None,
-        'objects': ['rgb_img', 'depth_img', 'ptcloud']
-    }])
-    val_transforms = utils.data_transforms.Compose([{
-        'callback': 'CenterCrop',
-        'parameters': {
-            'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
-            'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
-        },
-        'objects': ['rgb_img', 'depth_img']
-    }, {
-        'callback': 'RandomBackground',
-        'parameters': {
-            'bg_color': cfg.TEST.RANDOM_BG_COLOR
-        },
-        'objects': ['rgb_img']
-    }, {
-        'callback': 'Normalize',
-        'parameters': {
-            'mean': cfg.CONST.DATASET_MEAN,
-            'std': cfg.CONST.DATASET_STD
-        },
-        'objects': ['rgb_img']
-    }, {
-        'callback': 'ToTensor',
-        'parameters': None,
-        'objects': ['rgb_img', 'depth_img', 'ptcloud']
-    }])
-
     # Set up data loader
     dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.CONST.DATASET](cfg)
     train_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
-        utils.data_loaders.DatasetSubset.TRAIN, train_transforms),
+        utils.data_loaders.DatasetSubset.TRAIN),
                                                     batch_size=cfg.TRAIN.BATCH_SIZE,
                                                     num_workers=cfg.CONST.NUM_WORKERS,
                                                     collate_fn=utils.data_loaders.collate_fn,
@@ -96,7 +36,7 @@ def train_net(cfg):
                                                     shuffle=True,
                                                     drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
-        utils.data_loaders.DatasetSubset.VAL, val_transforms),
+        utils.data_loaders.DatasetSubset.VAL),
                                                   batch_size=1,
                                                   num_workers=cfg.CONST.NUM_WORKERS,
                                                   collate_fn=utils.data_loaders.collate_fn,
@@ -169,7 +109,7 @@ def train_net(cfg):
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptclouds = network(data)
-            dist1, dist2 = loss(ptclouds, data['ptcloud'])
+            dist1, dist2 = loss(ptclouds, data['gtcloud'])
             _loss = torch.mean(dist1) + torch.mean(dist2)
             losses.update(_loss.item() * 1000)
 

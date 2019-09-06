@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-03 17:00:59
+# @Last Modified time: 2019-09-06 10:37:36
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -20,11 +20,14 @@ __C.DATASETS.SHAPENET                          = edict()
 __C.DATASETS.SHAPENET.CATEGORY_FILE_PATH       = './datasets/ShapeNet.json'
 __C.DATASETS.SHAPENET.N_RENDERINGS             = 24
 __C.DATASETS.SHAPENET.N_POINTS                 = 16384
-__C.DATASETS.SHAPENET.DEPTH_MAX_VALUE          = 255
 __C.DATASETS.SHAPENET.K                        = []
 __C.DATASETS.SHAPENET.RGB_IMG_PATH             = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/render_%02d_l.png'
 __C.DATASETS.SHAPENET.DEPTH_IMG_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/depth_%02d_l.exr'
 __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetPoints/%s/%s.npy'
+__C.DATASETS.COMPLETE3D                        = edict()
+__C.DATASETS.COMPLETE3D.CATEGORY_FILE_PATH     = './datasets/Complete3D.json'
+__C.DATASETS.COMPLETE3D.PARTIAL_CLOUD_PATH     = '/home/SENSETIME/xiehaozhe/Datasets/Complete3D/%s/partial/%s/%s.h5'
+__C.DATASETS.COMPLETE3D.GT_CLOUD_PATH          = '/home/SENSETIME/xiehaozhe/Datasets/Complete3D/%s/gt/%s/%s.h5'
 
 
 #
@@ -33,7 +36,7 @@ __C.DATASETS.SHAPENET.POINTS_PATH              = '/home/SENSETIME/xiehaozhe/Data
 __C.CONST                                      = edict()
 __C.CONST.DEVICE                               = '0'
 __C.CONST.NUM_WORKERS                          = 4
-__C.CONST.DATASET                              = 'ShapeNet'
+__C.CONST.DATASET                              = 'Complete3D'
 __C.CONST.DATASET_MEAN                         = [0.5, 0.5, 0.5]
 __C.CONST.DATASET_STD                          = [0.5, 0.5, 0.5]
 __C.CONST.IMG_W                                = 256

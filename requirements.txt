@@ -1,5 +1,6 @@
 argparse
 easydict
+h5py
 matplotlib
 numpy
 open3d-python

@@ -24,36 +24,10 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
     torch.backends.cudnn.benchmark = True
 
     if test_data_loader is None:
-        val_transforms = utils.data_transforms.Compose([{
-            'callback': 'CenterCrop',
-            'parameters': {
-                'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
-                'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
-            },
-            'objects': ['rgb_img', 'depth_img']
-        }, {
-            'callback': 'RandomBackground',
-            'parameters': {
-                'bg_color': cfg.TEST.RANDOM_BG_COLOR
-            },
-            'objects': ['rgb_img']
-        }, {
-            'callback': 'Normalize',
-            'parameters': {
-                'mean': cfg.CONST.DATASET_MEAN,
-                'std': cfg.CONST.DATASET_STD
-            },
-            'objects': ['rgb_img']
-        }, {
-            'callback': 'ToTensor',
-            'parameters': None,
-            'objects': ['rgb_img', 'depth_img', 'ptcloud']
-        }])
-
         # Set up data loader
         dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.CONST.DATASET](cfg)
         test_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
-            utils.data_loaders.DatasetSubset.TEST, val_transforms),
+            utils.data_loaders.DatasetSubset.TEST),
                                                        batch_size=1,
                                                        num_workers=cfg.CONST.NUM_WORKERS,
                                                        collate_fn=utils.data_loaders.collate_fn,
@@ -93,10 +67,10 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptcloud = network(data)
-            dist1, dist2 = loss(ptcloud, data['ptcloud'])
+            dist1, dist2 = loss(ptcloud, data['gtcloud'])
             _loss = torch.mean(dist1) + torch.mean(dist2)
             test_losses.update(_loss.item() * 1000)
-            _metrics = Metrics.get(ptcloud, data['ptcloud'])
+            _metrics = Metrics.get(ptcloud, data['gtcloud'])
             test_metrics.update(_metrics)
 
             if not taxonomy_id in category_metrics:
@@ -105,7 +79,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
             if test_writer is not None and model_idx < 3:
                 pred_ptcloud = ptcloud.squeeze().cpu().numpy()
-                gt_ptcloud = data['ptcloud'].squeeze().cpu().numpy()
+                gt_ptcloud = data['gtcloud'].squeeze().cpu().numpy()
                 pred_ptcloud_img = utils.helpers.get_ptcloud_img(pred_ptcloud)
                 test_writer.add_image('Model%02d/Reconstructed' % model_idx, pred_ptcloud_img, epoch_idx + 1)
                 gt_ptcloud_img = utils.helpers.get_ptcloud_img(gt_ptcloud)
