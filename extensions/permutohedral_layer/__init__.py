@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-30 10:01:53
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-04 00:04:05
+# @Last Modified time: 2019-09-06 16:57:41
 # @Email:  cshzxie@gmail.com
 
 import sys
@@ -21,12 +21,12 @@ class PermutohedralFunction(torch.autograd.Function):
             group,
             out_channels,
             do_skip_blur,
-            data,
-            features,
-            features,
-            weights,
-            bias,
-            bias_multiplier,
+            data.contiguous(),
+            features.contiguous(),
+            features.contiguous(),
+            weights.contiguous(),
+            bias.contiguous(),
+            bias_multiplier.contiguous(),
         )
         output = outputs[0]
 
@@ -68,7 +68,7 @@ class PermutohedralLayer(torch.nn.Module):
                  group=1,
                  bias=True,
                  skip_blur=False):
-        super(Permutohedral, self).__init__()
+        super(PermutohedralLayer, self).__init__()
         self.neighborhood_size = neighborhood_size
         self.skip_blur = skip_blur
         self.group = group
@@ -88,5 +88,5 @@ class PermutohedralLayer(torch.nn.Module):
         self.weights.data.normal_(std=0.001)
 
     def forward(self, data, features):
-        return PermutohedralFunction.apply(self.neighborhood_size, self.group, self.out_channels, self.skip_blur, data,
-                                           features, features, self.bias, self.bias_multiplier)
+        return PermutohedralFunction.apply(self.neighborhood_size, self.group, self.out_channels, self.skip_blur,
+                                           self.weights, self.bias, self.bias_multiplier, data, features)

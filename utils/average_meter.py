@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-08-06 22:50:12
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-06 11:40:20
+# @Email:  cshzxie@gmail.com
 
 
 class AverageMeter(object):

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-08-08 14:31:30
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-06 11:41:57
+# @Email:  cshzxie@gmail.com
 
 import open3d
 import torch
