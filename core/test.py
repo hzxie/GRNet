@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-07-31 16:57:15
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-06 11:44:18
+# @Email:  cshzxie@gmail.com
 
 import logging
 import os
@@ -36,7 +39,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
     # Setup networks and initialize networks
     if network is None:
-        network = PSGN(cfg)
+        network = RPLNet(cfg)
 
         if torch.cuda.is_available():
             network = torch.nn.DataParallel(network).cuda()

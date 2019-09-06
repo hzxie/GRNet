@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-07-31 16:57:15
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-06 13:59:23
+# @Email:  cshzxie@gmail.com
 
 import logging
 import os
@@ -16,7 +19,7 @@ from tensorboardX import SummaryWriter
 
 from core.test import test_net
 from extensions.chamfer_dist import ChamferDistance
-from models.psgn import PSGN
+from models.rplnet import RPLNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
@@ -55,7 +58,7 @@ def train_net(cfg):
     val_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, 'test'))
 
     # Create the networks
-    network = PSGN(cfg)
+    network = RPLNet(cfg)
     network.apply(utils.helpers.init_weights)
     logging.debug('Parameters in network: %d.' % utils.helpers.count_parameters(network))
 

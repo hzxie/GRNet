@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-08-02 14:38:36
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-06 15:32:02
+# @Email:  cshzxie@gmail.com
 
 import cv2
 import numpy as np

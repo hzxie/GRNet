@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Developed by Haozhe Xie <cshzxie@gmail.com>
+# @Author: Haozhe Xie
+# @Date:   2019-07-31 16:57:15
+# @Last Modified by:   Haozhe Xie
+# @Last Modified time: 2019-09-06 11:40:53
+# @Email:  cshzxie@gmail.com
 
 import cv2
 import matplotlib.pyplot as plt

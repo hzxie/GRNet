@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-09-03 09:28:46
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-09-05 11:39:19
+ * @Last Modified time: 2019-09-06 16:27:16
  * @Email:  cshzxie@gmail.com
  */
 
@@ -1218,7 +1218,6 @@ std::vector<torch::Tensor> permutohedral_cuda_forward(
   int out_size      = out_height * out_width;
   int in_offset     = 0;
   int out_offset    = in_size;
-
   torch::Tensor output =
     torch::zeros({batch_size, out_channels, out_height, out_width},
                  torch::CUDA(torch::kFloat));
