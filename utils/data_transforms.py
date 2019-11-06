@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 15:32:02
+# @Last Modified time: 2019-11-06 17:06:08
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -42,7 +42,7 @@ class ToTensor(object):
         tensor = None
         shape = arr.shape
         if len(shape) == 2:    # Point Clouds
-            tensor = arr
+            tensor = arr.transpose(1, 0)
         elif len(shape) == 3:    # RGB/Depth Images
             tensor = arr.transpose(2, 0, 1)
         else:
@@ -152,5 +152,9 @@ class RandomSamplePoints(object):
         self.n_points = parameters['n_points']
 
     def __call__(self, ptcloud):
-        choice = np.random.choice(len(ptcloud), self.n_points, replace=False)
-        return ptcloud[choice, :]
+        choice = np.random.permutation(ptcloud.shape[0])
+        if choice.shape[0] < self.n_points:
+            choice = np.concatenate(
+                [choice, np.random.randint(ptcloud.shape[0], size=self.n_points - ptcloud.shape[0])])
+
+        return ptcloud[choice[:self.n_points]]

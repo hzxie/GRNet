@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 11:40:35
+# @Last Modified time: 2019-11-06 17:09:17
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -99,6 +99,74 @@ class ShapeNetDataLoader(object):
             self.dataset_categories = json.loads(f.read())
 
     def get_dataset(self, subset):
+        n_renderings = cfg.DATASETS.SHAPENET.N_RENDERINGS if subset == DatasetSubset.TRAIN else 1
+        file_list = self._get_file_list(self.cfg, self._get_subset(subset), n_renderings)
+        transforms = self._get_transforms(self.cfg, subset)
+        return Dataset({
+            'required_items': ['partial_cloud', 'gtcloud'],
+            'shuffle': subset == DatasetSubset.TRAIN
+        }, file_list, transforms, self.mc_client)
+
+    def _get_transforms(self, cfg, subset):
+        return utils.data_transforms.Compose([{
+            'callback': 'RandomSamplePoints',
+            'parameters': {
+                'n_points': cfg.CONST.N_INPUT_POINTS
+            },
+            'objects': ['partial_cloud']
+        }, {
+            'callback': 'ToTensor',
+            'parameters': None,
+            'objects': ['partial_cloud', 'gtcloud']
+        }])
+
+    def _get_subset(self, subset):
+        if subset == DatasetSubset.TRAIN:
+            return 'train'
+        elif subset == DatasetSubset.VAL:
+            return 'val'
+        else:
+            return 'test'
+
+    def _get_file_list(self, cfg, subset, n_renderings=1):
+        """Prepare file list for the dataset"""
+        file_list = []
+
+        for dc in self.dataset_categories:
+            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
+            samples = dc[subset]
+
+            for s in tqdm(samples, leave=False):
+                file_list.append({
+                    'taxonomy_id':
+                    dc['taxonomy_id'],
+                    'model_id':
+                    s,
+                    'partial_cloud_path': [
+                        cfg.DATASETS.SHAPENET.PARTIAL_POINTS_PATH % (subset, dc['taxonomy_id'], s, i)
+                        for i in range(n_renderings)
+                    ],
+                    'gtcloud_path': cfg.DATASETS.SHAPENET.COMPLETE_POINTS_PATH % (subset, dc['taxonomy_id'], s),
+                })
+
+        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
+        return file_list
+
+
+class ShapeNetRgbdDataLoader(object):
+    def __init__(self, cfg):
+        self.cfg = cfg
+        # Set up MemCached if available
+        self.mc_client = None
+        if cfg.MEMCACHED.ENABLED:
+            self.mc_client = mc.MemcachedClient.GetInstance(cfg.MEMCACHED.SERVER_CONFIG, cfg.MEMCACHED.CLIENT_CONFIG)
+
+        # Load the dataset indexing file
+        self.dataset_categories = []
+        with open(cfg.DATASETS.SHAPENET.CATEGORY_FILE_PATH) as f:
+            self.dataset_categories = json.loads(f.read())
+
+    def get_dataset(self, subset):
         file_list = self._get_file_list(self.cfg, self._get_subset(subset))
         transforms = self._get_transforms(self.cfg, subset)
         return Dataset(
@@ -134,8 +202,8 @@ class ShapeNetDataLoader(object):
             }, {
                 'callback': 'Normalize',
                 'parameters': {
-                    'mean': cfg.CONST.DATASET_MEAN,
-                    'std': cfg.CONST.DATASET_STD
+                    'mean': cfg.DATASET.MEAN,
+                    'std': cfg.DATASET.STD
                 },
                 'objects': ['rgb_img']
             }, {
@@ -160,8 +228,8 @@ class ShapeNetDataLoader(object):
             }, {
                 'callback': 'Normalize',
                 'parameters': {
-                    'mean': cfg.CONST.DATASET_MEAN,
-                    'std': cfg.CONST.DATASET_STD
+                    'mean': cfg.DATASET.MEAN,
+                    'std': cfg.DATASET.STD
                 },
                 'objects': ['rgb_img']
             }, {
@@ -207,66 +275,9 @@ class ShapeNetDataLoader(object):
         return file_list
 
 
-class Complete3DDataLoader(object):
-    def __init__(self, cfg):
-        self.cfg = cfg
-        # Set up MemCached if available
-        self.mc_client = None
-        if cfg.MEMCACHED.ENABLED:
-            self.mc_client = mc.MemcachedClient.GetInstance(cfg.MEMCACHED.SERVER_CONFIG, cfg.MEMCACHED.CLIENT_CONFIG)
-
-        # Load the dataset indexing file
-        self.dataset_categories = []
-        with open(cfg.DATASETS.COMPLETE3D.CATEGORY_FILE_PATH) as f:
-            self.dataset_categories = json.loads(f.read())
-
-    def get_dataset(self, subset):
-        file_list = self._get_file_list(self.cfg, self._get_subset(subset))
-        transforms = self._get_transforms(self.cfg, subset)
-        return Dataset({
-            'required_items': ['partial_cloud', 'gtcloud'],
-            'shuffle': subset == DatasetSubset.TRAIN
-        }, file_list, transforms, self.mc_client)
-
-    def _get_transforms(self, cfg, subset):
-        return utils.data_transforms.Compose([{
-            'callback': 'ToTensor',
-            'parameters': None,
-            'objects': ['partial_cloud', 'gtcloud']
-        }])
-
-    def _get_subset(self, subset):
-        if subset == DatasetSubset.TRAIN:
-            return 'train'
-        else:
-            return 'val'
-
-    def _get_file_list(self, cfg, subset):
-        """Prepare file list for the dataset"""
-        file_list = []
-
-        for dc in self.dataset_categories:
-            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
-            samples = dc[subset]
-            for s in tqdm(samples, leave=False):
-                file_list.append({
-                    'taxonomy_id':
-                    dc['taxonomy_id'],
-                    'model_id':
-                    s,
-                    'partial_cloud_path':
-                    cfg.DATASETS.COMPLETE3D.PARTIAL_CLOUD_PATH % (subset, dc['taxonomy_id'], s),
-                    'gtcloud_path':
-                    cfg.DATASETS.COMPLETE3D.GT_CLOUD_PATH % (subset, dc['taxonomy_id'], s),
-                })
-
-        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
-        return file_list
-
-
 # //////////////////////////////////////////// = Dataset Loader Mapping = //////////////////////////////////////////// #
 
 DATASET_LOADER_MAPPING = {
     'ShapeNet': ShapeNetDataLoader,
-    'Complete3D': Complete3DDataLoader,
+    'ShapeNetRGBD': ShapeNetRgbdDataLoader,
 } # yapf: disable

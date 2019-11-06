@@ -2,11 +2,11 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 11:41:10
+# @Last Modified time: 2019-11-06 17:08:21
 # @Email:  cshzxie@gmail.com
 
 import cv2
-import h5py
+import pcl
 import logging
 import numpy as np
 import pyexr
@@ -33,8 +33,8 @@ class IO:
             return cls._read_npy(mc_client, file_path)
         elif file_extension in ['.exr']:
             return cls._read_exr(mc_client, file_path)
-        elif file_extension in ['.h5', '.hdf5']:
-            return cls._read_hdf5(mc_client, file_path)
+        elif file_extension in ['.pcd']:
+            return cls._read_pcd(mc_client, file_path)
         else:
             raise Exception('Unsupported file extension: %s' % file_extension)
 
@@ -74,7 +74,24 @@ class IO:
     def _read_exr(cls, mc_client, file_path):
         return 1.0 / pyexr.open(file_path).get("Depth.Z").astype(np.float32)
 
+    # References: https://github.com/dimatura/pypcd/blob/master/pypcd/pypcd.py#L275
+    # Support PCD files without compression ONLY!
     @classmethod
-    def _read_hdf5(cls, mc_client, file_path):
-        f = h5py.File(file_path, 'r')
-        return f['data'][()]
+    def _read_pcd(cls, mc_client, file_path):
+        if mc_client is None:
+            pc = pcl.PointCloud()
+            pc.from_file(file_path.encode())
+            return np.array(pc.to_list())
+        else:
+            pyvector = mc.pyvector()
+            mc_client.Get(file_path, pyvector)
+            text = mc.ConvertString(pyvector).split('\n')
+            start_line_idx = len(text) - 1
+            for idx, line in enumerate(text):
+                if line == 'DATA ascii':
+                    start_line_idx = idx + 1
+                    break
+
+            ptcloud = text[start_line_idx:]
+            ptcloud = np.genfromtxt(BytesIO('\n'.join(ptcloud).encode()), dtype=np.float32)
+            return ptcloud

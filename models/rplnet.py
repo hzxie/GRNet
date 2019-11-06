@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 16:58:33
+# @Last Modified time: 2019-09-09 17:47:34
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -16,112 +16,48 @@ class RPLNet(torch.nn.Module):
         super(RPLNet, self).__init__()
         self.cfg = cfg
         self.conv1 = torch.nn.Sequential(
-            torch.nn.Conv1d(3, 32, kernel_size=1),
-            torch.nn.BatchNorm1d(32),
-            torch.nn.ReLU()
+            torch.nn.Conv1d(3, 128, kernel_size=1),
+            torch.nn.BatchNorm1d(128),
         )
-        self.conv2 = PermutohedralLayer(
-            in_channels_data=32,
-            in_channels_feature=3,
-            out_channels=64,
-            out_height=1,
-            out_width=2048)
-        self.conv2p = torch.nn.Sequential(
-            torch.nn.BatchNorm2d(64),
-            torch.nn.ReLU()
+        self.conv2 = torch.nn.Sequential(
+            torch.nn.Conv1d(128, 256, kernel_size=1),
+            torch.nn.BatchNorm1d(256),
         )
-        self.conv3 = PermutohedralLayer(
-            in_channels_data=64,
-            in_channels_feature=3,
-            out_channels=128,
-            out_height=1,
-            out_width=2048)
-        self.conv3p = torch.nn.Sequential(
-            torch.nn.BatchNorm2d(128),
-            torch.nn.ReLU()
+        self.conv3 = torch.nn.Sequential(
+            torch.nn.Conv1d(512, 512, kernel_size=1),
+            torch.nn.BatchNorm1d(512),
         )
-        self.conv4 = PermutohedralLayer(
-            in_channels_data=128,
-            in_channels_feature=3,
-            out_channels=256,
-            out_height=1,
-            out_width=2048)
-        self.conv4p = torch.nn.Sequential(
-            torch.nn.BatchNorm2d(256),
-            torch.nn.ReLU()
+        self.conv4 = torch.nn.Sequential(
+            torch.nn.Conv1d(512, 1024, kernel_size=1),
+            torch.nn.BatchNorm1d(1024),
         )
-        self.conv5 = PermutohedralLayer(
-            in_channels_data=256,
-            in_channels_feature=3,
-            out_channels=256,
-            out_height=1,
-            out_width=2048)
-        self.conv5p = torch.nn.Sequential(
-            torch.nn.BatchNorm2d(256),
-            torch.nn.ReLU()
-        )
-        self.conv6 = PermutohedralLayer(
-            in_channels_data=256,
-            in_channels_feature=3,
-            out_channels=256,
-            out_height=1,
-            out_width=2048)
-        self.conv6p = torch.nn.Sequential(
-            torch.nn.BatchNorm2d(256),
-            torch.nn.ReLU()
-        )
-        self.conv7 = torch.nn.Sequential(
-            torch.nn.Conv1d(960, 240, kernel_size=1),
-            torch.nn.BatchNorm1d(240),
-            torch.nn.ReLU()
-        )
-        self.conv8 = torch.nn.Sequential(
-            torch.nn.Conv1d(240, 60, kernel_size=1),
-            torch.nn.BatchNorm1d(60),
-            torch.nn.ReLU()
-        )
-        self.conv9 = torch.nn.Sequential(
-            torch.nn.Conv1d(60, 3, kernel_size=1),
-            torch.nn.BatchNorm1d(3),
-            torch.nn.ReLU()
+        self.conv5 = torch.nn.Sequential(
+            torch.nn.Linear(1024, 1024),
+            torch.nn.Linear(1024, 1024),
+            torch.nn.Linear(1024, 3072),
         )
 
     def _pick_and_scale(self, points, scale_factor):
         return points * scale_factor
 
     def forward(self, data):
-        partial_cloud = data['partial_cloud'].permute(0, 2, 1)
-        # print(partial_cloud.size())
+        partial_cloud = data['partial_cloud']
+        # print(partial_cloud.size())     # torch.Size([batch_size, 3, 2048])
         features1 = self.conv1(partial_cloud)
-        # print(features1.size())
-        features2 = self.conv2p(self.conv2(
-            features1.unsqueeze(dim=2),
-            self._pick_and_scale(partial_cloud, 64).unsqueeze(dim=2)
-        ))
-        # print(features2.size())
-        features3 = self.conv3p(self.conv3(
-            features2.unsqueeze(dim=2),
-            self._pick_and_scale(partial_cloud, 32).unsqueeze(dim=2)
-        ))
-        # print(features3.size())
-        features4 = self.conv4p(self.conv4(
-            features3.unsqueeze(dim=2),
-            self._pick_and_scale(partial_cloud, 16).unsqueeze(dim=2)
-        ))
-        # print(features4.size())
-        features5 = self.conv5p(self.conv5(
-            features4.unsqueeze(dim=2),
-            self._pick_and_scale(partial_cloud, 8).unsqueeze(dim=2)
-        ))
-        # print(features5.size())
-        features6 = self.conv6p(self.conv6(
-            features5.unsqueeze(dim=2),
-            self._pick_and_scale(partial_cloud, 4).unsqueeze(dim=2)
-        ))
-        # print(features6.size())
-        features = torch.cat([features2, features3, features4, features5, features6], dim=1).squeeze(dim=2)
-        # print(features.size())
-        ptcloud = self.conv9(self.conv8(self.conv7(features)))
-        # print(ptcloud.size())
+        # print(features1.size())         # torch.Size([batch_size, 128, 2048])
+        features2 = self.conv2(features1)
+        # print(features2.size())         # torch.Size([batch_size, 256, 2048])
+        features3 = torch.max(features2, dim=2, keepdim=True)[0].repeat(1, 1, 2048)
+        # print(features3.size())         # torch.Size([batch_size, 256, 2048])
+        features3 = torch.cat([features2, features3], dim=1)
+        # print(features3.size())         # torch.Size([batch_size, 512, 2048])
+        features4 = self.conv3(features3)
+        # print(features4.size())         # torch.Size([batch_size, 512, 2048])
+        features5 = self.conv4(features3)
+        # print(features5.size())         # torch.Size([batch_size, 1024, 2048])
+        features5 = torch.max(features5, dim=2)[0]
+        # print(features5.size())         # torch.Size([batch_size, 1024])
+        ptcloud = self.conv5(features5)
+        # print(ptcloud.size())           # torch.Size([batch_size, 3072])
 
-        return ptcloud
+        return ptcloud.view(-1, 3, 1024)
