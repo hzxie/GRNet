@@ -7,6 +7,7 @@ open3d-python
 opencv-python
 pprint
 pyexr
+python-pcl
 scipy
 tensorboardX==1.2
 torch>=1.0.0

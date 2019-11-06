@@ -18,176 +18,76 @@ class PSGN(torch.nn.Module):
         self.cfg = cfg
 
         # Layer Definition
-        self.conv1a = torch.nn.Sequential(
-            torch.nn.Conv2d(4, 16, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv1b = torch.nn.Sequential(
-            torch.nn.Conv2d(16, 16, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv2a = torch.nn.Sequential(
-            torch.nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=2),
-            torch.nn.ReLU()
-        )
-        self.conv2b = torch.nn.Sequential(
-            torch.nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv2c = torch.nn.Sequential(
-            torch.nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv3a = torch.nn.Sequential(
-            torch.nn.Conv2d(32, 64, kernel_size=3, padding=1, stride=2),
-            torch.nn.ReLU()
-        )
-        self.conv3b = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv3c = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv4a = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 128, kernel_size=3, padding=1, stride=2),
-            torch.nn.ReLU()
-        )
-        self.conv4b = torch.nn.Sequential(
-            torch.nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv4c = torch.nn.Sequential(
-            torch.nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv5a = torch.nn.Sequential(
-            torch.nn.Conv2d(128, 256, kernel_size=5, padding=2, stride=2),
-            torch.nn.ReLU()
-        )
-        self.conv5b = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv5c = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv6a = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 512, kernel_size=5, padding=2, stride=2),
-            torch.nn.ReLU()
-        )
-        self.conv6b = torch.nn.Sequential(
-            torch.nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv6c = torch.nn.Sequential(
-            torch.nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv6d = torch.nn.Sequential(
-            torch.nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.conv6e = torch.nn.Sequential(
-            torch.nn.Conv2d(512, 512, kernel_size=5, padding=2, stride=2),
-            torch.nn.ReLU()
-        )
-        self.fc7 = torch.nn.Sequential(
-            torch.nn.Linear(6144, 2048),
-            torch.nn.ReLU(),
-            torch.nn.Linear(2048, 2048)
-        )
-        
+        self.conv1a = torch.nn.Sequential(torch.nn.Conv2d(4, 16, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv1b = torch.nn.Sequential(torch.nn.Conv2d(16, 16, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv2a = torch.nn.Sequential(torch.nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=2), torch.nn.ReLU())
+        self.conv2b = torch.nn.Sequential(torch.nn.Conv2d(32, 32, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv2c = torch.nn.Sequential(torch.nn.Conv2d(32, 32, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv3a = torch.nn.Sequential(torch.nn.Conv2d(32, 64, kernel_size=3, padding=1, stride=2), torch.nn.ReLU())
+        self.conv3b = torch.nn.Sequential(torch.nn.Conv2d(64, 64, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv3c = torch.nn.Sequential(torch.nn.Conv2d(64, 64, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv4a = torch.nn.Sequential(torch.nn.Conv2d(64, 128, kernel_size=3, padding=1, stride=2),
+                                          torch.nn.ReLU())
+        self.conv4b = torch.nn.Sequential(torch.nn.Conv2d(128, 128, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv4c = torch.nn.Sequential(torch.nn.Conv2d(128, 128, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv5a = torch.nn.Sequential(torch.nn.Conv2d(128, 256, kernel_size=5, padding=2, stride=2),
+                                          torch.nn.ReLU())
+        self.conv5b = torch.nn.Sequential(torch.nn.Conv2d(256, 256, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv5c = torch.nn.Sequential(torch.nn.Conv2d(256, 256, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv6a = torch.nn.Sequential(torch.nn.Conv2d(256, 512, kernel_size=5, padding=2, stride=2),
+                                          torch.nn.ReLU())
+        self.conv6b = torch.nn.Sequential(torch.nn.Conv2d(512, 512, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv6c = torch.nn.Sequential(torch.nn.Conv2d(512, 512, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv6d = torch.nn.Sequential(torch.nn.Conv2d(512, 512, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.conv6e = torch.nn.Sequential(torch.nn.Conv2d(512, 512, kernel_size=5, padding=2, stride=2),
+                                          torch.nn.ReLU())
+        self.fc7 = torch.nn.Sequential(torch.nn.Linear(6144, 2048), torch.nn.ReLU(), torch.nn.Linear(2048, 2048))
+
         self.dconv1a = torch.nn.ConvTranspose2d(512, 256, kernel_size=5, stride=2, padding=2, output_padding=1)
         self.dconv1b = torch.nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1)
-        self.dconv1c = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv1c = torch.nn.Sequential(torch.nn.Conv2d(256, 256, kernel_size=3, padding=1), torch.nn.ReLU())
         self.dconv2a = torch.nn.ConvTranspose2d(256, 128, kernel_size=5, stride=2, padding=2, output_padding=1)
         self.dconv2b = torch.nn.Conv2d(256, 128, kernel_size=3, stride=1, padding=1)
-        self.dconv2c = torch.nn.Sequential(
-            torch.nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv2c = torch.nn.Sequential(torch.nn.Conv2d(128, 128, kernel_size=3, padding=1), torch.nn.ReLU())
         self.dconv3a = torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.dconv3b = torch.nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1)
-        self.dconv3c = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv3c = torch.nn.Sequential(torch.nn.Conv2d(64, 64, kernel_size=3, padding=1), torch.nn.ReLU())
         self.dconv4a = torch.nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.dconv4b = torch.nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1)
-        self.dconv4c = torch.nn.Sequential(
-            torch.nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv4c = torch.nn.Sequential(torch.nn.Conv2d(32, 32, kernel_size=3, padding=1), torch.nn.ReLU())
         self.dconv5a = torch.nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1)
         self.dconv5b = torch.nn.Conv2d(32, 16, kernel_size=3, stride=1, padding=1)
-        self.dconv5c = torch.nn.Sequential(
-            torch.nn.Conv2d(16, 16, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv5c = torch.nn.Sequential(torch.nn.Conv2d(16, 16, kernel_size=3, padding=1), torch.nn.ReLU())
 
         self.conv8a = torch.nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=2)
         self.conv8b = torch.nn.Conv2d(32, 32, kernel_size=3, padding=1)
-        self.conv8c = torch.nn.Sequential(
-            torch.nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.conv8c = torch.nn.Sequential(torch.nn.Conv2d(32, 32, kernel_size=3, padding=1), torch.nn.ReLU())
         self.conv9a = torch.nn.Conv2d(32, 64, kernel_size=3, padding=1, stride=2)
         self.conv9b = torch.nn.Conv2d(64, 64, kernel_size=3, padding=1)
-        self.conv9c = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.conv9c = torch.nn.Sequential(torch.nn.Conv2d(64, 64, kernel_size=3, padding=1), torch.nn.ReLU())
         self.conv10a = torch.nn.Conv2d(64, 128, kernel_size=5, padding=2, stride=2)
         self.conv10b = torch.nn.Conv2d(128, 128, kernel_size=3, padding=1)
-        self.conv10c = torch.nn.Sequential(
-            torch.nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.conv10c = torch.nn.Sequential(torch.nn.Conv2d(128, 128, kernel_size=3, padding=1), torch.nn.ReLU())
         self.conv11a = torch.nn.Conv2d(128, 256, kernel_size=5, padding=2, stride=2)
         self.conv11b = torch.nn.Conv2d(256, 256, kernel_size=3, padding=1)
-        self.conv11c = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.conv11c = torch.nn.Sequential(torch.nn.Conv2d(256, 256, kernel_size=3, padding=1), torch.nn.ReLU())
         self.conv12 = torch.nn.Conv2d(256, 512, kernel_size=5, padding=2, stride=2)
         self.fc13 = torch.nn.Linear(6144, 2048)
 
         self.dconv6a = torch.nn.ConvTranspose2d(512, 256, kernel_size=5, stride=2, padding=2, output_padding=1)
         self.dconv6b = torch.nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
-        self.dconv6c = torch.nn.Sequential(
-            torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv6c = torch.nn.Sequential(torch.nn.Conv2d(256, 256, kernel_size=3, padding=1), torch.nn.ReLU())
         self.dconv7a = torch.nn.ConvTranspose2d(256, 128, kernel_size=5, stride=2, padding=2, output_padding=1)
         self.dconv7b = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
-        self.dconv7c = torch.nn.Sequential(
-            torch.nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv7c = torch.nn.Sequential(torch.nn.Conv2d(128, 128, kernel_size=3, padding=1), torch.nn.ReLU())
         self.dconv8a = torch.nn.ConvTranspose2d(128, 64, kernel_size=5, stride=2, padding=2, output_padding=1)
         self.dconv8b = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        self.dconv8c = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
-        self.dconv8d = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU()
-        )
+        self.dconv8c = torch.nn.Sequential(torch.nn.Conv2d(64, 64, kernel_size=3, padding=1), torch.nn.ReLU())
+        self.dconv8d = torch.nn.Sequential(torch.nn.Conv2d(64, 64, kernel_size=3, padding=1), torch.nn.ReLU())
 
-        self.fc14 = torch.nn.Sequential(
-            torch.nn.Linear(2048, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Linear(1024, 768)
-        )
+        self.fc14 = torch.nn.Sequential(torch.nn.Linear(2048, 1024), torch.nn.ReLU(), torch.nn.Linear(1024, 768))
         self.conv14 = torch.nn.Conv2d(64, 3, kernel_size=3, padding=1)
-    
+
     def forward(self, data):
         rgb_imgs = data['rgb_img']
         depth_imgs = data['depth_img']

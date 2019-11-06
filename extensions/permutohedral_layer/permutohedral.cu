@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-09-03 09:28:46
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-09-06 16:27:16
+ * @Last Modified time: 2019-09-10 14:55:02
  * @Email:  cshzxie@gmail.com
  */
 
@@ -1144,8 +1144,6 @@ boost::shared_ptr<std::vector<BlurOperation>> init_lattice(
   int out_width  = out_features.size(3);
   int in_size    = in_height * in_width;
   int out_size   = out_height * out_width;
-  int in_offset  = 0;
-  int out_offset = in_size;
   int data_count = in_size + out_size;
 
   GaussianFilter gauss(neighborhood_size, feature_size);

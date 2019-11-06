@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 11:41:57
+# @Last Modified time: 2019-09-09 18:39:09
 # @Email:  cshzxie@gmail.com
 
 import open3d
@@ -49,7 +49,7 @@ class Metrics(object):
 
     @classmethod
     def _get_open3d_ptcloud(cls, tensor):
-        tensor = tensor.squeeze().cpu().numpy()
+        tensor = tensor.squeeze().cpu().numpy().transpose(1, 0)
         ptcloud = open3d.PointCloud()
         ptcloud.points = open3d.Vector3dVector(tensor)
 

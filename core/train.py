@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 13:59:23
+# @Last Modified time: 2019-11-06 16:18:29
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -29,8 +29,9 @@ def train_net(cfg):
     torch.backends.cudnn.benchmark = True
 
     # Set up data loader
-    dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.CONST.DATASET](cfg)
-    train_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
+    train_dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.DATASET.TRAIN_DATASET](cfg)
+    test_dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.DATASET.TEST_DATASET](cfg)
+    train_data_loader = torch.utils.data.DataLoader(dataset=train_dataset_loader.get_dataset(
         utils.data_loaders.DatasetSubset.TRAIN),
                                                     batch_size=cfg.TRAIN.BATCH_SIZE,
                                                     num_workers=cfg.CONST.NUM_WORKERS,
@@ -38,7 +39,7 @@ def train_net(cfg):
                                                     pin_memory=True,
                                                     shuffle=True,
                                                     drop_last=True)
-    val_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
+    val_data_loader = torch.utils.data.DataLoader(dataset=test_dataset_loader.get_dataset(
         utils.data_loaders.DatasetSubset.VAL),
                                                   batch_size=1,
                                                   num_workers=cfg.CONST.NUM_WORKERS,
