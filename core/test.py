@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 11:44:18
+# @Last Modified time: 2019-11-07 11:08:17
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -70,7 +70,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptcloud = network(data)
-            dist1, dist2 = loss(ptcloud, data['gtcloud'])
+            dist1, dist2 = loss(ptcloud.permute(0, 2, 1), data['gtcloud'].permute(0, 2, 1))
             _loss = torch.mean(dist1) + torch.mean(dist2)
             test_losses.update(_loss.item() * 1000)
             _metrics = Metrics.get(ptcloud, data['gtcloud'])
