@@ -146,7 +146,8 @@ class ShapeNetDataLoader(object):
                         cfg.DATASETS.SHAPENET.PARTIAL_POINTS_PATH % (subset, dc['taxonomy_id'], s, i)
                         for i in range(n_renderings)
                     ],
-                    'gtcloud_path': cfg.DATASETS.SHAPENET.COMPLETE_POINTS_PATH % (subset, dc['taxonomy_id'], s),
+                    'gtcloud_path':
+                    cfg.DATASETS.SHAPENET.COMPLETE_POINTS_PATH % (subset, dc['taxonomy_id'], s),
                 })
 
         logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))

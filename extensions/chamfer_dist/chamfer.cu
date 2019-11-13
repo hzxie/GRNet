@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-08-07 20:54:24
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-09-03 10:02:04
+ * @Last Modified time: 2019-11-07 15:55:51
  * @Email:  cshzxie@gmail.com
  */
 
@@ -169,6 +169,7 @@ int chamfer_cuda_forward(at::Tensor xyz1,
   }
   return 1;
 }
+
 __global__ void NmDistanceGradKernel(int b,
                                      int n,
                                      const float* xyz1,
