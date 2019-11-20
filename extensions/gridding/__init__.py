@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-20 14:31:15
+# @Last Modified time: 2019-11-20 21:13:11
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -34,33 +34,29 @@ class GriddingDistanceFunction(torch.autograd.Function):
         min_z = torch.floor(torch.min(min_pred_z, min_gt_z))
         max_z = torch.ceil(torch.max(max_pred_z, max_gt_z))
 
-        pred_grid_weights = gridding.forward(min_x, max_x, min_y, max_y, min_z, max_z, pred_cloud)
-        # print(pred_grid_weights.size())   # torch.Size(batch_size, n_grid_vertices, n_pred_pts, 3)
-        pred_grid = torch.prod(pred_grid_weights, dim=3)
-        pred_grid = torch.sum(pred_grid, dim=2)
-        # print(pred_grid.size())           # torch.Size(batch_size, n_grid_vertices)
+        pred_grid, pred_grid_pt_weights, pred_grid_pt_indexes = gridding.forward(min_x, max_x, min_y, max_y, min_z,
+                                                                                 max_z, pred_cloud)
+        # print(pred_grid.size())             # torch.Size(batch_size, n_grid_vertices)
+        # print(pred_grid_pt_weights.size())  # torch.Size(batch_size, n_pred_pts, 8, 3)
+        # print(pred_grid_pt_indexes.size())  # torch.Size(batch_size, n_pred_pts, 8)
 
-        gt_grid_weights = gridding.forward(min_x, max_x, min_y, max_y, min_z, max_z, gt_cloud)
-        # print(pred_grid_weights.size())   # torch.Size(batch_size, n_grid_vertices, n_gt_pts, 3)
-        gt_grid = torch.prod(gt_grid_weights, dim=3)
-        gt_grid = torch.sum(gt_grid, dim=2)
-        # print(gt_grid.size())             # torch.Size(batch_size, n_grid_vertices)
+        gt_grid, gt_grid_pt_weights, gt_grid_pt_indexes = gridding.forward(min_x, max_x, min_y, max_y, min_z, max_z,
+                                                                           gt_cloud)
+        # print(gt_grid.size())               # torch.Size(batch_size, n_grid_vertices)
+        # print(gt_grid_pt_weights.size())    # torch.Size(batch_size, n_gt_pts, 8, 3)
+        # print(gt_grid_pt_indexes.size())    # torch.Size(batch_size, n_gt_pts, 8)
 
-        min_max_values = torch.Tensor([min_x, max_x, min_y, max_y, min_z, max_z])
-        ctx.save_for_backward(min_max_values, pred_grid_weights, gt_grid_weights, pred_cloud, gt_cloud)
+        ctx.save_for_backward(pred_grid_pt_weights, pred_grid_pt_indexes, gt_grid_pt_weights, gt_grid_pt_indexes)
 
         return pred_grid, gt_grid
 
     @staticmethod
     def backward(ctx, grad_pred_grid, grad_gt_grid):
-        min_max_values, pred_grid_weights, gt_grid_weights, pred_cloud, gt_cloud = ctx.saved_tensors
-        min_x, max_x, min_y, max_y, min_z, max_z = min_max_values
+        pred_grid_pt_weights, pred_grid_pt_indexes, gt_grid_pt_weights, gt_grid_pt_indexes = ctx.saved_tensors
 
-        grad_pred_cloud = gridding.backward(min_x, max_x, min_y, max_y, min_z, max_z, grad_pred_grid, pred_cloud,
-                                            pred_grid_weights)
+        grad_pred_cloud = gridding.backward(pred_grid_pt_weights, pred_grid_pt_indexes, grad_pred_grid)
         # print(grad_ptcloud.size())   # torch.Size(batch_size, n_pred_pts, 3)
-        grad_gt_cloud = gridding.backward(min_x, max_x, min_y, max_y, min_z, max_z, grad_gt_grid, gt_cloud,
-                                          gt_grid_weights)
+        grad_gt_cloud = gridding.backward(gt_grid_pt_weights, gt_grid_pt_indexes, grad_gt_grid)
         # print(grad_gt_cloud.size())  # torch.Size(batch_size, n_gt_pts, 3)
 
         return grad_pred_cloud, grad_gt_cloud
@@ -76,7 +72,7 @@ class GriddingDistance(torch.nn.Module):
         pred_cloud(b, n_pts1, 3)
         gt_cloud(b, n_pts2, 3)
         '''
-        pred_cloud = pred_cloud / self.scale
-        gt_cloud = gt_cloud / self.scale
+        pred_cloud = pred_cloud * self.scale
+        gt_cloud = gt_cloud * self.scale
 
         return GriddingDistanceFunction.apply(pred_cloud, gt_cloud)
