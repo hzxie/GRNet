@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-19 20:58:34
+# @Last Modified time: 2019-11-20 11:45:50
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -38,20 +38,27 @@ class GriddingDistanceFunction(torch.autograd.Function):
         # print(pred_grid_weights.size())   # torch.Size(batch_size, n_grid_vertices, n_pred_pts, 3)
         pred_grid = torch.prod(pred_grid_weights, dim=3)
         pred_grid = torch.sum(pred_grid, dim=2)
+        # print(pred_grid.size())           # torch.Size(batch_size, n_grid_vertices)
 
         gt_grid_weights = gridding.forward(min_x, max_x, min_y, max_y, min_z, max_z, gt_cloud)
         # print(pred_grid_weights.size())   # torch.Size(batch_size, n_grid_vertices, n_gt_pts, 3)
         gt_grid = torch.prod(gt_grid_weights, dim=3)
         gt_grid = torch.sum(gt_grid, dim=2)
+        # print(gt_grid.size())             # torch.Size(batch_size, n_grid_vertices)
 
         min_max_values = torch.Tensor([min_x, max_x, min_y, max_y, min_z, max_z])
-        ctx.save_for_backward(min_max_values, pred_grid_weights, gt_grid_weights)
+        ctx.save_for_backward(min_max_values, pred_grid_weights, gt_grid_weights, pred_cloud, gt_cloud)
         return pred_grid, gt_grid
 
     @staticmethod
     def backward(ctx, grad_pred_grid, grad_gt_grid):
-        min_max_values, pred_grid_weights, gt_grid_weights = ctx.saved_tensors
+        min_max_values, pred_grid_weights, gt_grid_weights, pred_cloud, gt_cloud = ctx.saved_tensors
         min_x, max_x, min_y, max_y, min_z, max_z = min_max_values
+
+        grad_ptcloud = gridding.backward(min_x, max_x, min_y, max_y, min_z, max_z, grad_pred_grid, pred_cloud, pred_grid_weights)
+        # print(grad_ptcloud.size())   # torch.Size(batch_size, n_pred_pts, 3)
+        grad_gt_cloud = gridding.backward(min_x, max_x, min_y, max_y, min_z, max_z, grad_gt_grid, gt_cloud, gt_grid_weights)
+        # print(grad_gt_cloud.size())  # torch.Size(batch_size, n_gt_pts, 3)
 
         return grad_pt_cloud, grad_gt_cloud
 

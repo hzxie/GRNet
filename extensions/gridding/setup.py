@@ -8,13 +8,12 @@
 from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
-setup(
-    name='gridding',
-    version='1.0.0',
-    ext_modules=[
-        CUDAExtension('gridding', [
-            'gridding_cuda.cpp',
-            'gridding.cu',
-        ]),
-    ],
-    cmdclass={'build_ext': BuildExtension})
+setup(name='gridding',
+      version='1.0.0',
+      ext_modules=[
+          CUDAExtension('gridding', [
+              'gridding_cuda.cpp',
+              'gridding.cu',
+          ]),
+      ],
+      cmdclass={'build_ext': BuildExtension})
