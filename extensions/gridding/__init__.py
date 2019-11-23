@@ -2,12 +2,73 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-20 21:13:11
+# @Last Modified time: 2019-11-22 21:25:32
 # @Email:  cshzxie@gmail.com
 
 import torch
 
 import gridding
+
+
+class GriddingFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, ptcloud):
+        min_x = torch.min(ptcloud[:, :, 0])
+        max_x = torch.max(ptcloud[:, :, 0])
+        min_y = torch.min(ptcloud[:, :, 1])
+        max_y = torch.max(ptcloud[:, :, 1])
+        min_z = torch.min(ptcloud[:, :, 2])
+        max_z = torch.max(ptcloud[:, :, 2])
+
+        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(min_x, max_x, min_y, max_y, min_z, max_z, ptcloud)
+        # print(grid.size())             # torch.Size(batch_size, n_grid_vertices)
+        # print(grid_pt_weights.size())  # torch.Size(batch_size, n_pts, 8, 3)
+        # print(grid_pt_indexes.size())  # torch.Size(batch_size, n_pts, 8)
+        ctx.save_for_backward(grid_pt_weights, grid_pt_indexes)
+
+        return grid
+
+    @staticmethod
+    def backward(ctx, grad_grid):
+        grid_pt_weights, grid_pt_indexes = ctx.saved_tensors
+        grad_ptcloud = gridding.backward(grid_pt_weights, grid_pt_indexes, grad_grid)
+        # print(grad_ptcloud.size())   # torch.Size(batch_size, n_pts, 3)
+
+        return grad_ptcloud
+
+
+class Gridding(torch.nn.Module):
+    def __init__(self, scale=1):
+        super(Gridding, self).__init__()
+        self.scale = scale
+
+    def forward(self, ptcloud):
+        ptcloud = ptcloud * self.scale
+        return GriddingFunction.apply(ptcloud)
+
+
+class GriddingReverseFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, scale, grid):
+        ptcloud = gridding.rev_forward(scale, grid)
+        ctx.save_for_backward(grid)
+        return ptcloud
+
+    @staticmethod
+    def backward(ctx, grad_ptcloud):
+        grid = ctx.saved_tensors
+        grad_grid = gridding.rev_backward(grid, grad_ptcloud)
+        return None, grad_grid
+
+
+class GriddingReverse(torch.nn.Module):
+    def __init__(self, scale=1):
+        super(GriddingReverse, self).__init__()
+        self.scale = scale
+
+    def forward(self, grid):
+        ptcloud = GriddingReverseFunction.apply(self.scale, grid)
+        return ptcloud / self.scale
 
 
 class GriddingDistanceFunction(torch.autograd.Function):
