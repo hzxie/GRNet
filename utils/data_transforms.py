@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-06 17:06:08
+# @Last Modified time: 2019-12-02 12:17:48
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -39,16 +39,12 @@ class ToTensor(object):
         pass
 
     def __call__(self, arr):
-        tensor = None
         shape = arr.shape
-        if len(shape) == 2:    # Point Clouds
-            tensor = arr.transpose(1, 0)
-        elif len(shape) == 3:    # RGB/Depth Images
-            tensor = arr.transpose(2, 0, 1)
-        else:
-            raise Exception('Unknown shape: %s' % list(shape))
+        if len(shape) == 3:    # RGB/Depth Images
+            arr = arr.transpose(2, 0, 1)
+
         # Ref: https://discuss.pytorch.org/t/torch-from-numpy-not-support-negative-strides/3663/2
-        return torch.from_numpy(tensor.copy()).float()
+        return torch.from_numpy(arr.copy()).float()
 
 
 class Normalize(object):

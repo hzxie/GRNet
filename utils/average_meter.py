@@ -8,7 +8,6 @@
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
-
     def __init__(self, items=None):
         self.items = items
         self.n_items = 1 if items is None else len(items)

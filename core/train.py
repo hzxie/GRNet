@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-07 16:15:47
+# @Last Modified time: 2019-12-02 17:22:59
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -19,12 +19,12 @@ from tensorboardX import SummaryWriter
 
 from core.test import test_net
 from extensions.chamfer_dist import ChamferDistance
-from models.rplnet import RPLNet
+from extensions.gridding import Gridding, GriddingDistance
+from models.rgnet import RGNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
 import matplotlib.pyplot as plt
-
 
 
 def train_net(cfg):
@@ -62,7 +62,7 @@ def train_net(cfg):
     val_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, 'test'))
 
     # Create the networks
-    network = RPLNet(cfg)
+    network = RGNet(cfg)
     network.apply(utils.helpers.init_weights)
     logging.debug('Parameters in network: %d.' % utils.helpers.count_parameters(network))
 
@@ -80,7 +80,8 @@ def train_net(cfg):
                                                         gamma=cfg.TRAIN.GAMMA)
 
     # Set up loss functions
-    loss = ChamferDistance()
+    loss = torch.nn.L1Loss()
+    gd = Gridding(scale=32)
 
     # Load pretrained model if exists
     init_epoch = 0
@@ -105,7 +106,6 @@ def train_net(cfg):
         data_time = AverageMeter()
         losses = AverageMeter()
 
-        lr_scheduler.step()
         network.train()
 
         batch_end_time = time()
@@ -116,8 +116,10 @@ def train_net(cfg):
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptcloud = network(data)
-            dist1, dist2 = loss(ptcloud.permute(0, 2, 1), data['gtcloud'].permute(0, 2, 1))
-            _loss = torch.mean(dist1) + torch.mean(dist2)
+            gt_grid = gd(data['gtcloud'].clamp(-1, 1))
+            # dist1, dist2 = 
+            # torch.mean(dist1) + torch.mean(dist2)
+            _loss = loss(ptcloud, gt_grid)
             losses.update(_loss.item() * 1000)
 
             network.zero_grad()
@@ -133,6 +135,7 @@ def train_net(cfg):
                          (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, batch_idx + 1, n_batches, batch_time.val(),
                           data_time.val(), losses.val()))
 
+        lr_scheduler.step()
         epoch_end_time = time()
         train_writer.add_scalar('Loss/Epoch', losses.avg(), epoch_idx + 1)
         logging.info('Epoch [%d/%d] EpochTime = %.3f (s) Loss = %.4f' %

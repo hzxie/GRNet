@@ -11,3 +11,4 @@ python-pcl
 scipy
 tensorboardX==1.2
 torch>=1.0.0
+tqdm

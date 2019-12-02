@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-07 11:08:17
+# @Last Modified time: 2019-11-21 16:06:28
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -17,7 +17,8 @@ from time import time
 from tensorboardX import SummaryWriter
 
 from extensions.chamfer_dist import ChamferDistance
-from models.psgn import PSGN
+from extensions.gridding import GriddingDistance
+from models.rgnet import RGNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
@@ -39,7 +40,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
     # Setup networks and initialize networks
     if network is None:
-        network = RPLNet(cfg)
+        network = RGNet(cfg)
 
         if torch.cuda.is_available():
             network = torch.nn.DataParallel(network).cuda()
