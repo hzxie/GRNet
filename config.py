@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-07 16:15:14
+# @Last Modified time: 2019-12-02 15:59:44
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -59,7 +59,6 @@ __C.CONST.IMG_H                                  = 192
 __C.CONST.CROP_IMG_W                             = 210
 __C.CONST.CROP_IMG_H                             = 210
 __C.CONST.N_INPUT_POINTS                         = 2048
-__C.CONST.N_OUTPUT_POINTS                        = 16384
 
 #
 # Directories
@@ -95,4 +94,4 @@ __C.TRAIN.RANDOM_BG_COLOR                        = [[225, 255], [225, 255], [225
 #
 __C.TEST                                         = edict()
 __C.TEST.RANDOM_BG_COLOR                         = [[240, 240], [240, 240], [240, 240]]
-__C.TEST.METRIC_NAME                             = 'F-Score'
+__C.TEST.METRIC_NAME                             = 'ChamferDistance'

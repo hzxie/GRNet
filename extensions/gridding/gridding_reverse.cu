@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-11-21 16:42:18
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-11-22 21:29:52
+ * @Last Modified time: 2019-12-02 10:40:09
  * @Email:  cshzxie@gmail.com
  */
 
@@ -93,13 +93,13 @@ __global__ void gridding_reverse_kernel(int scale,
                          weights[6] * y_offset +
                          weights[7] * y_offset;
     ptcloud[j * 3 + 2] = weights[0] * (z_offset - 1) +
-                         weights[1] * (z_offset) +
+                         weights[1] * z_offset +
                          weights[2] * (z_offset - 1) +
-                         weights[3] * (z_offset) +
+                         weights[3] * z_offset +
                          weights[4] * (z_offset - 1) +
-                         weights[5] * (z_offset) +
+                         weights[5] * z_offset +
                          weights[6] * (z_offset - 1) +
-                         weights[7] * (z_offset);
+                         weights[7] * z_offset;
     // clang-format on
   }
 }

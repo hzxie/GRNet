@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-22 21:25:32
+# @Last Modified time: 2019-12-02 17:12:37
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -12,15 +12,11 @@ import gridding
 
 class GriddingFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, ptcloud):
-        min_x = torch.min(ptcloud[:, :, 0])
-        max_x = torch.max(ptcloud[:, :, 0])
-        min_y = torch.min(ptcloud[:, :, 1])
-        max_y = torch.max(ptcloud[:, :, 1])
-        min_z = torch.min(ptcloud[:, :, 2])
-        max_z = torch.max(ptcloud[:, :, 2])
-
-        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(min_x, max_x, min_y, max_y, min_z, max_z, ptcloud)
+    def forward(ctx, scale, ptcloud):
+        half_scale = scale // 2
+        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(-half_scale, half_scale - 1, 
+                                                                  -half_scale, half_scale - 1,
+                                                                  -half_scale, half_scale - 1, ptcloud)
         # print(grid.size())             # torch.Size(batch_size, n_grid_vertices)
         # print(grid_pt_weights.size())  # torch.Size(batch_size, n_pts, 8, 3)
         # print(grid_pt_indexes.size())  # torch.Size(batch_size, n_pts, 8)
@@ -34,7 +30,7 @@ class GriddingFunction(torch.autograd.Function):
         grad_ptcloud = gridding.backward(grid_pt_weights, grid_pt_indexes, grad_grid)
         # print(grad_ptcloud.size())   # torch.Size(batch_size, n_pts, 3)
 
-        return grad_ptcloud
+        return None, grad_ptcloud
 
 
 class Gridding(torch.nn.Module):
@@ -44,7 +40,7 @@ class Gridding(torch.nn.Module):
 
     def forward(self, ptcloud):
         ptcloud = ptcloud * self.scale
-        return GriddingFunction.apply(ptcloud)
+        return GriddingFunction.apply(self.scale, ptcloud)
 
 
 class GriddingReverseFunction(torch.autograd.Function):
@@ -56,8 +52,9 @@ class GriddingReverseFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_ptcloud):
-        grid = ctx.saved_tensors
+        grid = ctx.saved_tensors[0]
         grad_grid = gridding.rev_backward(grid, grad_ptcloud)
+        grad_grid = torch.sum(grad_grid, dim=2).view(-1, 32, 32, 32)
         return None, grad_grid
 
 
