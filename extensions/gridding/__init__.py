@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 12:06:42
+# @Last Modified time: 2019-12-03 14:27:16
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -13,7 +13,7 @@ import gridding
 class GriddingFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, scale, ptcloud):
-        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(-scale, scale - 1, 
+        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(-scale, scale - 1,
                                                                   -scale, scale - 1,
                                                                   -scale, scale - 1, ptcloud)
         # print(grid.size())             # torch.Size(batch_size, n_grid_vertices)

@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 11:47:54
+# @Last Modified time: 2019-12-03 16:00:36
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -19,13 +19,6 @@ from enum import Enum, unique
 from tqdm import tqdm
 
 from utils.io import IO
-# References: http://confluence.sensetime.com/pages/viewpage.action?pageId=44650315
-from config import cfg
-try:
-    sys.path.append(cfg.MEMCACHED.LIBRARY_PATH)
-    import mc
-except:
-    pass
 
 
 @unique
@@ -56,11 +49,10 @@ def collate_fn(batch):
 
 
 class Dataset(torch.utils.data.dataset.Dataset):
-    def __init__(self, options, file_list, transforms=None, mc_client=None):
+    def __init__(self, options, file_list, transforms=None):
         self.options = options
         self.file_list = file_list
         self.transforms = transforms
-        self.mc_client = mc_client
 
     def __len__(self):
         return len(self.file_list)
@@ -77,7 +69,7 @@ class Dataset(torch.utils.data.dataset.Dataset):
             if type(file_path) == list:
                 file_path = file_path[rand_idx]
 
-            data[ri] = IO.get(self.mc_client, file_path).astype(np.float32)
+            data[ri] = IO.get(file_path).astype(np.float32)
 
         if self.transforms is not None:
             data = self.transforms(data)
@@ -88,10 +80,6 @@ class Dataset(torch.utils.data.dataset.Dataset):
 class ShapeNetDataLoader(object):
     def __init__(self, cfg):
         self.cfg = cfg
-        # Set up MemCached if available
-        self.mc_client = None
-        if cfg.MEMCACHED.ENABLED:
-            self.mc_client = mc.MemcachedClient.GetInstance(cfg.MEMCACHED.SERVER_CONFIG, cfg.MEMCACHED.CLIENT_CONFIG)
 
         # Load the dataset indexing file
         self.dataset_categories = []
@@ -99,13 +87,13 @@ class ShapeNetDataLoader(object):
             self.dataset_categories = json.loads(f.read())
 
     def get_dataset(self, subset):
-        n_renderings = cfg.DATASETS.SHAPENET.N_RENDERINGS if subset == DatasetSubset.TRAIN else 1
+        n_renderings = self.cfg.DATASETS.SHAPENET.N_RENDERINGS if subset == DatasetSubset.TRAIN else 1
         file_list = self._get_file_list(self.cfg, self._get_subset(subset), n_renderings)
         transforms = self._get_transforms(self.cfg, subset)
         return Dataset({
             'required_items': ['partial_cloud', 'gtcloud'],
             'shuffle': subset == DatasetSubset.TRAIN
-        }, file_list, transforms, self.mc_client)
+        }, file_list, transforms)
 
     def _get_transforms(self, cfg, subset):
         return utils.data_transforms.Compose([{
@@ -157,11 +145,6 @@ class ShapeNetDataLoader(object):
 class ShapeNetRgbdDataLoader(object):
     def __init__(self, cfg):
         self.cfg = cfg
-        # Set up MemCached if available
-        self.mc_client = None
-        if cfg.MEMCACHED.ENABLED:
-            self.mc_client = mc.MemcachedClient.GetInstance(cfg.MEMCACHED.SERVER_CONFIG, cfg.MEMCACHED.CLIENT_CONFIG)
-
         # Load the dataset indexing file
         self.dataset_categories = []
         with open(cfg.DATASETS.SHAPENET.CATEGORY_FILE_PATH) as f:
@@ -175,7 +158,7 @@ class ShapeNetRgbdDataLoader(object):
                 'n_renderings': self.cfg.DATASETS.SHAPENET.N_RENDERINGS,
                 'required_items': ['rgb_img', 'depth_img', 'gtcloud'],
                 'shuffle': subset == DatasetSubset.TRAIN
-            }, file_list, transforms, self.mc_client)
+            }, file_list, transforms)
 
     def _get_transforms(self, cfg, subset):
         if subset == DatasetSubset.TRAIN:
