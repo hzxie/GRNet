@@ -3,7 +3,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07:31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 17:24:25
+# @Last Modified time: 2019-12-02 20:23:41
 # @Email:  cshzxie@gmail.com
 
 import argparse
@@ -11,7 +11,7 @@ import cv2
 import logging
 import matplotlib
 import os
-import open3d
+# import open3d
 import sys
 import torch
 

@@ -2,10 +2,10 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-09 18:39:09
+# @Last Modified time: 2019-12-03 14:22:38
 # @Email:  cshzxie@gmail.com
 
-import open3d
+# import open3d
 import torch
 
 from extensions.chamfer_dist import ChamferDistance
@@ -14,11 +14,13 @@ from extensions.chamfer_dist import ChamferDistance
 class Metrics(object):
     ITEMS = [{
         'name': 'F-Score',
+        'enabled': False,
         'eval_func': 'cls._get_f_score',
         'is_greater_better': True,
         'init_value': 0
     }, {
         'name': 'ChamferDistance',
+        'enabled': True,
         'eval_func': 'cls._get_chamfer_distance',
         'eval_object': ChamferDistance(),
         'is_greater_better': False,
@@ -63,7 +65,7 @@ class Metrics(object):
 
     @classmethod
     def items(cls):
-        return [i['name'] for i in cls.ITEMS]
+        return [i['name'] for i in cls.ITEMS if i['enabled']]
 
     def __init__(self, metric_name, values):
         self._metric_name = metric_name

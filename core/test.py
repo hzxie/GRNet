@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-21 16:06:28
+# @Last Modified time: 2019-12-03 14:18:32
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -53,7 +53,8 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
     network.eval()
 
     # Set up loss functions
-    loss = ChamferDistance()
+    loss = torch.nn.L1Loss()
+    gd = Gridding(scale=16)
 
     # Testing loop
     n_samples = len(test_data_loader)
@@ -71,9 +72,11 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptcloud = network(data)
-            dist1, dist2 = loss(ptcloud.permute(0, 2, 1), data['gtcloud'].permute(0, 2, 1))
-            _loss = torch.mean(dist1) + torch.mean(dist2)
-            test_losses.update(_loss.item() * 1000)
+            gt_grid = gd(data['gtcloud'])
+            _loss = loss(ptcloud, gt_grid)
+            losses.update(_loss.item() * 1000)
+            # dist1, dist2 = torch.mean(dist1) + torch.mean(dist2)
+            # _loss = torch.mean(dist1) + torch.mean(dist2)
             _metrics = Metrics.get(ptcloud, data['gtcloud'])
             test_metrics.update(_metrics)
 

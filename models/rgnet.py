@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 17:18:34
+# @Last Modified time: 2019-12-03 14:23:14
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -15,7 +15,7 @@ class RGNet(torch.nn.Module):
     def __init__(self, cfg):
         super(RGNet, self).__init__()
         self.cfg = cfg
-        self.gridding = Gridding(scale=32)
+        self.gridding = Gridding(scale=16)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(32),
@@ -57,10 +57,9 @@ class RGNet(torch.nn.Module):
             torch.nn.BatchNorm3d(1),
             torch.nn.ReLU()
         )
-        self.gridding_rev = GriddingReverse(scale=32)
 
     def forward(self, data):
-        partial_cloud = data['partial_cloud'] # .clamp(-1, 1)
+        partial_cloud = data['partial_cloud']
         # print(partial_cloud.size())     # torch.Size([batch_size, 2048, 3])
         pt_features_32_l = self.gridding(partial_cloud).view(-1, 1, 32, 32, 32)
         # print(pt_features_32_l.size())  # torch.Size([batch_size, 1, 32, 32, 32])
@@ -83,5 +82,6 @@ class RGNet(torch.nn.Module):
         # ptcloud = self.gridding_rev(pt_features_32_r.squeeze(dim=1))
         # print(ptcloud.size())           # torch.Size([batch_size, 32768, 3])
         ptcloud = pt_features_32_r.squeeze(dim=1).view(-1, 32768)
+        # print(ptcloud.size())           # torch.Size([batch_size, 32768, 3])
 
         return ptcloud

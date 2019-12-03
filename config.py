@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 15:59:44
+# @Last Modified time: 2019-12-03 12:29:50
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -54,8 +54,8 @@ __C.DATASET.TEST_DATASET                         = 'ShapeNet'
 __C.CONST                                        = edict()
 __C.CONST.DEVICE                                 = '0'
 __C.CONST.NUM_WORKERS                            = 8
-__C.CONST.IMG_W                                  = 256
-__C.CONST.IMG_H                                  = 192
+__C.CONST.IMG_W                                  = 224
+__C.CONST.IMG_H                                  = 224
 __C.CONST.CROP_IMG_W                             = 210
 __C.CONST.CROP_IMG_H                             = 210
 __C.CONST.N_INPUT_POINTS                         = 2048
