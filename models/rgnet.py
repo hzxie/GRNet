@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 14:23:14
+# @Last Modified time: 2019-12-03 20:42:33
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -57,6 +57,7 @@ class RGNet(torch.nn.Module):
             torch.nn.BatchNorm3d(1),
             torch.nn.ReLU()
         )
+        self.gridding_rev = GriddingReverse(scale=32)
 
     def forward(self, data):
         partial_cloud = data['partial_cloud']
@@ -79,9 +80,7 @@ class RGNet(torch.nn.Module):
         # print(pt_features_16_r.size())  # torch.Size([batch_size, 32, 16, 16, 16])
         pt_features_32_r = self.dconv8(pt_features_16_r) + pt_features_32_l
         # print(pt_features_32_r.size())  # torch.Size([batch_size, 1, 32, 32, 32])
-        # ptcloud = self.gridding_rev(pt_features_32_r.squeeze(dim=1))
-        # print(ptcloud.size())           # torch.Size([batch_size, 32768, 3])
-        ptcloud = pt_features_32_r.squeeze(dim=1).view(-1, 32768)
+        ptcloud = self.gridding_rev(pt_features_32_r.squeeze(dim=1))
         # print(ptcloud.size())           # torch.Size([batch_size, 32768, 3])
 
         return ptcloud

@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 14:18:32
+# @Last Modified time: 2019-12-03 21:51:12
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -53,13 +53,13 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
     network.eval()
 
     # Set up loss functions
-    loss = torch.nn.L1Loss()
-    gd = Gridding(scale=16)
+    chamfer_dist = ChamferDistance()
+    l1_loss = torch.nn.L1Loss()
 
     # Testing loop
     n_samples = len(test_data_loader)
     test_losses = AverageMeter()
-    test_metrics = AverageMeter(Metrics.items())
+    test_metrics = AverageMeter(Metrics.names())
     category_metrics = dict()
 
     # Testing loop
@@ -72,16 +72,14 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptcloud = network(data)
-            gt_grid = gd(data['gtcloud'])
-            _loss = loss(ptcloud, gt_grid)
-            losses.update(_loss.item() * 1000)
-            # dist1, dist2 = torch.mean(dist1) + torch.mean(dist2)
-            # _loss = torch.mean(dist1) + torch.mean(dist2)
+            dist1, dist2 = chamfer_dist(ptcloud, data['gtcloud'])
+            _loss = torch.mean(dist1) + torch.mean(dist2)
+            test_losses.update(_loss.item() * 1000)
             _metrics = Metrics.get(ptcloud, data['gtcloud'])
             test_metrics.update(_metrics)
 
             if not taxonomy_id in category_metrics:
-                category_metrics[taxonomy_id] = AverageMeter(Metrics.items())
+                category_metrics[taxonomy_id] = AverageMeter(Metrics.names())
             category_metrics[taxonomy_id].update(_metrics)
 
             if test_writer is not None and model_idx < 3:
