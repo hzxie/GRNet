@@ -1,7 +1,7 @@
 argparse
 easydict
 h5py
-matplotlib
+matplotlib==3.0.3
 numpy
 open3d-python
 opencv-python

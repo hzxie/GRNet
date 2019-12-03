@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-10 09:29:50
+# @Last Modified time: 2019-12-03 21:24:50
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -41,7 +41,7 @@ def count_parameters(network):
 def get_ptcloud_img(ptcloud):
     fig = plt.figure(figsize=(8, 8))
 
-    x, z, y = ptcloud
+    x, z, y = ptcloud.transpose(1, 0)
     ax = fig.gca(projection='3d', adjustable='box')
     ax.axis('off')
     ax.axis('scaled')

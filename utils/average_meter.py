@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-06 22:50:12
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-09-06 11:40:20
+# @Last Modified time: 2019-12-03 21:50:38
 # @Email:  cshzxie@gmail.com
 
 
@@ -31,19 +31,19 @@ class AverageMeter(object):
 
     def val(self, idx=None):
         if idx is None:
-            return self._val[0] if self.n_items == 1 else [self._val[i] for i in range(self.n_items)]
+            return self._val[0] if self.items is None else [self._val[i] for i in range(self.n_items)]
         else:
             return self._val[idx]
 
     def count(self, idx=None):
         if idx is None:
-            return self._count[0] if self.n_items == 1 else [self._count[i] for i in range(self.n_items)]
+            return self._count[0] if self.items is None else [self._count[i] for i in range(self.n_items)]
         else:
             return self._count[idx]
 
     def avg(self, idx=None):
         if idx is None:
-            return self._sum[0] / self._count[0] if self.n_items == 1 else [
+            return self._sum[0] / self._count[0] if self.items is None else [
                 self._sum[i] / self._count[i] for i in range(self.n_items)
             ]
         else:

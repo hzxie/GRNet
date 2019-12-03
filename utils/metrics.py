@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 14:22:38
+# @Last Modified time: 2019-12-03 21:24:19
 # @Email:  cshzxie@gmail.com
 
 # import open3d
@@ -29,12 +29,22 @@ class Metrics(object):
 
     @classmethod
     def get(cls, pred, gt):
-        _values = [0] * len(cls.ITEMS)
-        for i, item in enumerate(cls.ITEMS):
+        _items = cls.items()
+        _values = [0] * len(_items)
+        for i, item in enumerate(_items):
             eval_func = eval(item['eval_func'])
             _values[i] = eval_func(pred, gt)
 
         return _values
+
+    @classmethod
+    def items(cls):
+        return [i for i in cls.ITEMS if i['enabled']]
+
+    @classmethod
+    def names(cls):
+        _items = cls.items()
+        return [i['name'] for i in _items]
 
     @classmethod
     def _get_f_score(cls, pred, gt, th=0.01):
@@ -63,19 +73,15 @@ class Metrics(object):
         dist1, dist2 = chamfer_distance(pred, gt)
         return (torch.mean(dist1) + torch.mean(dist2)).item() * 1000
 
-    @classmethod
-    def items(cls):
-        return [i['name'] for i in cls.ITEMS if i['enabled']]
-
     def __init__(self, metric_name, values):
-        self._metric_name = metric_name
-        self._values = [item['init_value'] for item in Metrics.ITEMS]
+        self._items = Metrics.items()
+        self._values = [item['init_value'] for item in self._items]
 
         if type(values).__name__ == 'list':
             self._values = values
         elif type(values).__name__ == 'dict':
             item_indexes = {}
-            for idx, item in enumerate(Metrics.ITEMS):
+            for idx, item in enumerate(self._items):
                 item_name = item['name']
                 item_indexes[item_name] = idx
             for k, v in values.items():
@@ -85,7 +91,7 @@ class Metrics(object):
 
     def state_dict(self):
         _dict = dict()
-        for i in range(len(Metrics.ITEMS)):
+        for i in range(len(self._items)):
             item = self.ITEMS[i]['name']
             value = self._values[i]
             _dict[item] = value
@@ -100,7 +106,7 @@ class Metrics(object):
             return True
 
         _index = -1
-        for i, _item in enumerate(Metrics.ITEMS):
+        for i, _item in enumerate(self._items):
             if _item['name'] == self.metric_name:
                 _index = i
                 break
