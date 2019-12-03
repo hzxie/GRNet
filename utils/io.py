@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 15:59:35
+# @Last Modified time: 2019-12-03 16:30:12
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -12,6 +12,8 @@ import numpy as np
 import pyexr
 import os
 import sys
+
+from io import BytesIO
 
 # References: http://confluence.sensetime.com/pages/viewpage.action?pageId=44650315
 from config import cfg

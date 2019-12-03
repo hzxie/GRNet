@@ -3,7 +3,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07:31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 20:23:41
+# @Last Modified time: 2019-12-03 16:29:48
 # @Email:  cshzxie@gmail.com
 
 import argparse
@@ -14,15 +14,10 @@ import os
 # import open3d
 import sys
 import torch
-
 # Fix no $DISPLAY environment variable
 matplotlib.use('Agg')
-
 # Fix deadlock in DataLoader
 cv2.setNumThreads(0)
-
-# Fix CUDA error: initialization error
-torch.multiprocessing.set_start_method('spawn', force="True")
 
 from pprint import pprint
 
@@ -70,7 +65,7 @@ def main():
 if __name__ == '__main__':
     # Check python version
     if sys.version_info < (3, 0):
-        raise Exception("Please follow the installation instruction on https://github.com/hzxie/RPLNet")
+        raise Exception("Please follow the installation instruction on https://github.com/hzxie/RGNet")
 
     logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', level=logging.DEBUG)
     main()
