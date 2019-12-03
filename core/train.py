@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 17:22:59
+# @Last Modified time: 2019-12-03 14:24:41
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -81,7 +81,7 @@ def train_net(cfg):
 
     # Set up loss functions
     loss = torch.nn.L1Loss()
-    gd = Gridding(scale=32)
+    gd = Gridding(scale=16)
 
     # Load pretrained model if exists
     init_epoch = 0
@@ -116,9 +116,8 @@ def train_net(cfg):
                 data[k] = utils.helpers.var_or_cuda(v)
 
             ptcloud = network(data)
-            gt_grid = gd(data['gtcloud'].clamp(-1, 1))
-            # dist1, dist2 = 
-            # torch.mean(dist1) + torch.mean(dist2)
+            gt_grid = gd(data['gtcloud'])
+            # dist1, dist2 = torch.mean(dist1) + torch.mean(dist2)
             _loss = loss(ptcloud, gt_grid)
             losses.update(_loss.item() * 1000)
 
@@ -142,18 +141,18 @@ def train_net(cfg):
                      (epoch_idx + 1, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, losses.avg()))
 
         # Validate the current model
-        metrics = test_net(cfg, epoch_idx, val_data_loader, val_writer, network)
+        # metrics = test_net(cfg, epoch_idx, val_data_loader, val_writer, network)
 
         # Save ckeckpoints
-        if (epoch_idx + 1) % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
-            file_name = 'best-ckpt.pth' if metrics.better_than(best_metrics) else 'epoch-%03d.pth' % (epoch_idx + 1)
-            output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
-            torch.save({
-                'epoch_index': epoch_idx + 1,
-                'best_metrics': metrics.state_dict(),
-                'network': network.state_dict()
-            }, output_path) # yapf: disable
-            logging.info('Saved checkpoint to %s ...' % output_path)
+        # if (epoch_idx + 1) % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
+        #     file_name = 'best-ckpt.pth' if metrics.better_than(best_metrics) else 'epoch-%03d.pth' % (epoch_idx + 1)
+        #     output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
+        #     torch.save({
+        #         'epoch_index': epoch_idx + 1,
+        #         'best_metrics': metrics.state_dict(),
+        #         'network': network.state_dict()
+        #     }, output_path) # yapf: disable
+        #     logging.info('Saved checkpoint to %s ...' % output_path)
 
     train_writer.close()
     val_writer.close()
