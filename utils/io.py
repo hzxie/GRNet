@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 16:30:12
+# @Last Modified time: 2019-12-04 20:12:30
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -84,7 +84,7 @@ class IO:
         if mc_client is None:
             pc = pcl.PointCloud()
             pc.from_file(file_path.encode())
-            return np.array(pc.to_list())
+            ptcloud = np.array(pc.to_list())
         else:
             pyvector = mc.pyvector()
             mc_client.Get(file_path, pyvector)
@@ -97,4 +97,6 @@ class IO:
 
             ptcloud = text[start_line_idx:]
             ptcloud = np.genfromtxt(BytesIO('\n'.join(ptcloud).encode()), dtype=np.float32)
-            return ptcloud
+
+        ptcloud = np.concatenate((ptcloud, np.array([[0, 0, 0]])), axis=0)
+        return ptcloud
