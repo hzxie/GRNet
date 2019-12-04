@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 20:42:33
+# @Last Modified time: 2019-12-04 20:14:09
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -15,7 +15,7 @@ class RGNet(torch.nn.Module):
     def __init__(self, cfg):
         super(RGNet, self).__init__()
         self.cfg = cfg
-        self.gridding = Gridding(scale=16)
+        self.gridding = Gridding(scale=32)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(32),
