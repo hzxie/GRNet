@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-11-13 10:52:53
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-02 16:55:16
+ * @Last Modified time: 2019-12-09 14:28:25
  * @Email:  cshzxie@gmail.com
  */
 
@@ -36,7 +36,8 @@ torch::Tensor gridding_reverse_cuda_forward(int scale,
                                             torch::Tensor grid,
                                             cudaStream_t stream);
 
-torch::Tensor gridding_reverse_cuda_backward(torch::Tensor grid,
+torch::Tensor gridding_reverse_cuda_backward(torch::Tensor ptcloud,
+                                             torch::Tensor grid,
                                              torch::Tensor grad_ptcloud,
                                              cudaStream_t stream);
 
@@ -73,13 +74,15 @@ torch::Tensor gridding_reverse_forward(int scale, torch::Tensor grid) {
   return gridding_reverse_cuda_forward(scale, grid, stream);
 }
 
-torch::Tensor gridding_reverse_backward(torch::Tensor grid,
+torch::Tensor gridding_reverse_backward(torch::Tensor ptcloud,
+                                        torch::Tensor grid,
                                         torch::Tensor grad_ptcloud) {
+  CHECK_INPUT(ptcloud);
   CHECK_INPUT(grid);
   CHECK_INPUT(grad_ptcloud);
 
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
-  return gridding_reverse_cuda_backward(grid, grad_ptcloud, stream);
+  return gridding_reverse_cuda_backward(ptcloud, grid, grad_ptcloud, stream);
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
