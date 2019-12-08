@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-02 12:17:48
+# @Last Modified time: 2019-12-09 09:50:32
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -52,13 +52,12 @@ class Normalize(object):
         self.mean = parameters['mean']
         self.std = parameters['std']
 
-    def __call__(self, img):
-        img = img.astype(np.float32) / 255.
-        img /= self.std
-        img -= self.mean
-        img *= 2
+    def __call__(self, arr):
+        arr = arr.astype(np.float32)
+        arr /= self.std
+        arr -= self.mean
 
-        return img
+        return arr
 
 
 class CenterCrop(object):

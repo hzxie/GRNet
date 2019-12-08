@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-04 19:58:10
+# @Last Modified time: 2019-12-09 19:50:33
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -46,15 +46,15 @@ class GriddingReverseFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, scale, grid):
         ptcloud = gridding.rev_forward(scale, grid)
-        ctx.save_for_backward(torch.Tensor([scale]), grid)
+        ctx.save_for_backward(torch.Tensor([scale]), grid, ptcloud)
         return ptcloud
 
     @staticmethod
     def backward(ctx, grad_ptcloud):
-        scale, grid = ctx.saved_tensors
+        scale, grid, ptcloud = ctx.saved_tensors
         scale = int(scale.item())
-        grad_grid = gridding.rev_backward(grid, grad_ptcloud)
-        grad_grid = torch.sum(grad_grid, dim=2).view(-1, scale, scale, scale)
+        grad_grid = gridding.rev_backward(ptcloud, grid, grad_ptcloud)
+        grad_grid = grad_grid.view(-1, scale, scale, scale)
         return None, grad_grid
 
 
@@ -65,7 +65,7 @@ class GriddingReverse(torch.nn.Module):
 
     def forward(self, grid):
         ptcloud = GriddingReverseFunction.apply(self.scale, grid)
-        return ptcloud / self.scale
+        return ptcloud / self.scale * 2
 
 
 class GriddingDistanceFunction(torch.autograd.Function):

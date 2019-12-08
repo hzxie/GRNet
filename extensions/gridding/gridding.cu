@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-11-13 10:53:22
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-03 12:04:44
+ * @Last Modified time: 2019-12-09 11:41:32
  * @Email:  cshzxie@gmail.com
  */
 
@@ -15,7 +15,7 @@
 
 // Computer the number of threads needed in GPU
 inline int get_n_threads(int n) {
-  const int pow_2 = std::log(static_cast<double>(n)) / std::log(2.0);
+  const int pow_2 = std::log(static_cast<float>(n)) / std::log(2.0);
   return max(min(1 << pow_2, CUDA_NUM_THREADS), 1);
 }
 
@@ -24,7 +24,7 @@ __device__ int compute_index(
   return offset_x * len_y * len_z + offset_y * len_z + offset_z;
 }
 
-__device__ float compute_weight(float x, float x0) { return (1 - abs(x - x0)); }
+__device__ float compute_weight(float x, float x0) { return 1 - abs(x - x0); }
 
 __global__ void gridding_kernel(int n_grid_vertices,
                                 int n_pts,
