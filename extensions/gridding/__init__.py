@@ -13,9 +13,8 @@ import gridding
 class GriddingFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, scale, ptcloud):
-        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(-scale, scale - 1,
-                                                                  -scale, scale - 1,
-                                                                  -scale, scale - 1, ptcloud)
+        grid, grid_pt_weights, grid_pt_indexes = gridding.forward(-scale, scale - 1, -scale, scale - 1, -scale,
+                                                                  scale - 1, ptcloud)
         # print(grid.size())             # torch.Size(batch_size, n_grid_vertices)
         # print(grid_pt_weights.size())  # torch.Size(batch_size, n_pts, 8, 3)
         # print(grid_pt_indexes.size())  # torch.Size(batch_size, n_pts, 8)

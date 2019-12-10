@@ -2,14 +2,14 @@
  * @Author: Haozhe Xie
  * @Date:   2019-11-21 16:42:18
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-09 20:14:03
+ * @Last Modified time: 2019-12-10 09:55:34
  * @Email:  cshzxie@gmail.com
  */
 
-#include <bits/stdc++.h> 
+#include <bits/stdc++.h>
+#include <torch/extension.h>
 #include <cstdio>
 #include <cstdlib>
-#include <torch/extension.h>
 
 #define CUDA_NUM_THREADS 512
 #define EPS 1e-6
@@ -114,6 +114,10 @@ torch::Tensor gridding_reverse_cuda_forward(int scale,
   gridding_reverse_kernel<<<batch_size, get_n_threads(n_pts), 0, stream>>>(
     scale, n_pts, grid.data<float>(), ptcloud.data<float>());
 
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    printf("Error in gridding_cuda_forward: %s\n", cudaGetErrorString(err));
+  }
   return ptcloud;
 }
 
@@ -224,5 +228,9 @@ torch::Tensor gridding_reverse_cuda_backward(torch::Tensor ptcloud,
     scale, n_pts, ptcloud.data<float>(), grid.data<float>(),
     grad_ptcloud.data<float>(), grad_grid.data<float>());
 
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    printf("Error in gridding_cuda_forward: %s\n", cudaGetErrorString(err));
+  }
   return grad_grid;
 }
