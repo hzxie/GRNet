@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 12:42:52
+# @Last Modified time: 2019-12-10 14:21:04
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -86,16 +86,14 @@ def train_net(cfg):
     # Load pretrained model if exists
     init_epoch = 0
     best_metrics = None
-    best_epoch = -1
     if 'WEIGHTS' in cfg.CONST:
         logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
-        init_epoch = checkpoint['epoch_idx']
-        best_epoch = checkpoint['best_epoch']
+        init_epoch = checkpoint['epoch_index']
         best_metrics = Metrics(cfg.TEST.METRIC_NAME, checkpoint['best_metrics'])
-        network.load_state_dict(checkpoint['network_state_dict'])
-        logging.info('Recover complete. Current epoch #%d, best metrics = %s at epoch #%d.' %
-                     (init_epoch, best_metrics, best_epoch))
+        network.load_state_dict(checkpoint['network'])
+        logging.info('Recover complete. Current epoch = #%d; best metrics = %s.' %
+                     (init_epoch, best_metrics))
 
     # Training/Testing the network
     losses = AverageMeter()
