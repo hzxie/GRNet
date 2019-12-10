@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 12:34:08
+# @Last Modified time: 2019-12-10 14:17:46
 # @Email:  cshzxie@gmail.com
 
 # import open3d
@@ -76,6 +76,7 @@ class Metrics(object):
     def __init__(self, metric_name, values):
         self._items = Metrics.items()
         self._values = [item['init_value'] for item in self._items]
+        self.metric_name = metric_name
 
         if type(values).__name__ == 'list':
             self._values = values
@@ -92,7 +93,7 @@ class Metrics(object):
     def state_dict(self):
         _dict = dict()
         for i in range(len(self._items)):
-            item = self.ITEMS[i]['name']
+            item = self._items[i]['name']
             value = self._values[i]
             _dict[item] = value
 
@@ -113,6 +114,7 @@ class Metrics(object):
         if _index == -1:
             raise Exception('Invalid metric name to compare.')
 
+        _metric = self._items[i]
         _value = self._values[_index]
         other_value = other._values[_index]
-        return _value > other_value if self._is_greater_better else _value < other_value
+        return _value > other_value if _metric['is_greater_better'] else _value < other_value
