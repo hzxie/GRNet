@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 21:51:12
+# @Last Modified time: 2019-12-10 12:33:54
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -29,7 +29,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
     if test_data_loader is None:
         # Set up data loader
-        dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.CONST.DATASET](cfg)
+        dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.DATASET.TEST_DATASET](cfg)
         test_data_loader = torch.utils.data.DataLoader(dataset=dataset_loader.get_dataset(
             utils.data_loaders.DatasetSubset.TEST),
                                                        batch_size=1,
@@ -47,7 +47,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
         logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
-        network.load_state_dict(checkpoint['network_state_dict'])
+        network.load_state_dict(checkpoint['network'])
 
     # Switch models to evaluation mode
     network.eval()

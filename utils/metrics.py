@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 21:24:19
+# @Last Modified time: 2019-12-10 12:34:08
 # @Email:  cshzxie@gmail.com
 
 # import open3d
@@ -22,7 +22,7 @@ class Metrics(object):
         'name': 'ChamferDistance',
         'enabled': True,
         'eval_func': 'cls._get_chamfer_distance',
-        'eval_object': ChamferDistance(),
+        'eval_object': ChamferDistance(ignore_zeros=True),
         'is_greater_better': False,
         'init_value': 32767
     }]

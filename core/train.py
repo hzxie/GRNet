@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 21:51:15
+# @Last Modified time: 2019-12-10 12:42:52
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -144,14 +144,17 @@ def train_net(cfg):
 
         # Save ckeckpoints
         if (epoch_idx + 1) % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
-            file_name = 'best-ckpt.pth' if metrics.better_than(best_metrics) else 'epoch-%03d.pth' % (epoch_idx + 1)
+            file_name = 'ckpt-best.pth' if metrics.better_than(best_metrics) else 'ckpt-epoch-%03d.pth' % (epoch_idx + 1)
             output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
             torch.save({
                 'epoch_index': epoch_idx + 1,
                 'best_metrics': metrics.state_dict(),
                 'network': network.state_dict()
             }, output_path) # yapf: disable
+
             logging.info('Saved checkpoint to %s ...' % output_path)
+            if metrics.better_than(best_metrics):
+                best_metrics = metrics
 
     train_writer.close()
     val_writer.close()
