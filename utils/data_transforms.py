@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-09 09:50:32
+# @Last Modified time: 2019-12-16 15:51:36
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -148,8 +148,10 @@ class RandomSamplePoints(object):
 
     def __call__(self, ptcloud):
         choice = np.random.permutation(ptcloud.shape[0])
-        if choice.shape[0] < self.n_points:
-            choice = np.concatenate(
-                [choice, np.random.randint(ptcloud.shape[0], size=self.n_points - ptcloud.shape[0])])
+        ptcloud = ptcloud[choice[:self.n_points]]
 
-        return ptcloud[choice[:self.n_points]]
+        if ptcloud.shape[0] < self.n_points:
+            zeros = np.zeros((self.n_points - ptcloud.shape[0], 3))
+            ptcloud = choice = np.concatenate([ptcloud, zeros])
+
+        return ptcloud

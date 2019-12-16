@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 12:27:57
+# @Last Modified time: 2019-12-16 15:41:27
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -98,5 +98,5 @@ class IO:
             ptcloud = text[start_line_idx:]
             ptcloud = np.genfromtxt(BytesIO('\n'.join(ptcloud).encode()), dtype=np.float32)
 
-        ptcloud = np.concatenate((ptcloud, np.array([[0, 0, 0]])), axis=0)
+        # ptcloud = np.concatenate((ptcloud, np.array([[0, 0, 0]])), axis=0)
         return ptcloud
