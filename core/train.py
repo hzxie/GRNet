@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 11:03:44
+# @Last Modified time: 2019-12-16 17:25:23
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -92,8 +92,7 @@ def train_net(cfg):
         init_epoch = checkpoint['epoch_index']
         best_metrics = Metrics(cfg.TEST.METRIC_NAME, checkpoint['best_metrics'])
         network.load_state_dict(checkpoint['network'])
-        logging.info('Recover complete. Current epoch = #%d; best metrics = %s.' %
-                     (init_epoch, best_metrics))
+        logging.info('Recover complete. Current epoch = #%d; best metrics = %s.' % (init_epoch, best_metrics))
 
     # Training/Testing the network
     losses = AverageMeter()
@@ -144,7 +143,8 @@ def train_net(cfg):
 
         # Save ckeckpoints
         if (epoch_idx + 1) % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
-            file_name = 'ckpt-best.pth' if metrics.better_than(best_metrics) else 'ckpt-epoch-%03d.pth' % (epoch_idx + 1)
+            file_name = 'ckpt-best.pth' if metrics.better_than(best_metrics) else 'ckpt-epoch-%03d.pth' % (epoch_idx +
+                                                                                                           1)
             output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
             torch.save({
                 'epoch_index': epoch_idx + 1,

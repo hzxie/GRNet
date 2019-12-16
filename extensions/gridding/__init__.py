@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 10:57:38
+# @Last Modified time: 2019-12-16 21:23:59
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -38,7 +38,14 @@ class Gridding(torch.nn.Module):
 
     def forward(self, ptcloud):
         ptcloud = ptcloud * self.scale
-        return GriddingFunction.apply(self.scale, ptcloud)
+        _ptcloud = torch.split(ptcloud, 1, dim=0)
+        grids = []
+        for p in _ptcloud:
+            non_zeros = torch.sum(p, dim=2).ne(0)
+            p = p[non_zeros].unsqueeze(dim=0)
+            grids.append(GriddingFunction.apply(self.scale, p))
+
+        return torch.cat(grids, dim=0).contiguous()
 
 
 class GriddingReverseFunction(torch.autograd.Function):
@@ -69,28 +76,7 @@ class GriddingReverse(torch.nn.Module):
 
 class GriddingDistanceFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, pred_cloud, gt_cloud):
-        min_pred_x = torch.min(pred_cloud[:, :, 0])
-        max_pred_x = torch.max(pred_cloud[:, :, 0])
-        min_pred_y = torch.min(pred_cloud[:, :, 1])
-        max_pred_y = torch.max(pred_cloud[:, :, 1])
-        min_pred_z = torch.min(pred_cloud[:, :, 2])
-        max_pred_z = torch.max(pred_cloud[:, :, 2])
-
-        min_gt_x = torch.min(gt_cloud[:, :, 0])
-        max_gt_x = torch.max(gt_cloud[:, :, 0])
-        min_gt_y = torch.min(gt_cloud[:, :, 1])
-        max_gt_y = torch.max(gt_cloud[:, :, 1])
-        min_gt_z = torch.min(gt_cloud[:, :, 2])
-        max_gt_z = torch.max(gt_cloud[:, :, 2])
-
-        min_x = torch.floor(torch.min(min_pred_x, min_gt_x))
-        max_x = torch.ceil(torch.max(max_pred_x, max_gt_x))
-        min_y = torch.floor(torch.min(min_pred_y, min_gt_y))
-        max_y = torch.ceil(torch.max(max_pred_y, max_gt_y))
-        min_z = torch.floor(torch.min(min_pred_z, min_gt_z))
-        max_z = torch.ceil(torch.max(max_pred_z, max_gt_z))
-
+    def forward(ctx, min_x, max_x, min_y, max_y, min_z, max_z, pred_cloud, gt_cloud):
         pred_grid, pred_grid_pt_weights, pred_grid_pt_indexes = gridding.forward(min_x, max_x, min_y, max_y, min_z,
                                                                                  max_z, pred_cloud)
         # print(pred_grid.size())             # torch.Size(batch_size, n_grid_vertices)
@@ -116,7 +102,7 @@ class GriddingDistanceFunction(torch.autograd.Function):
         grad_gt_cloud = gridding.backward(gt_grid_pt_weights, gt_grid_pt_indexes, grad_gt_grid)
         # print(grad_gt_cloud.size())  # torch.Size(batch_size, n_gt_pts, 3)
 
-        return grad_pred_cloud, grad_gt_cloud
+        return None, None, None, None, None, None, grad_pred_cloud, grad_gt_cloud
 
 
 class GriddingDistance(torch.nn.Module):
@@ -132,7 +118,41 @@ class GriddingDistance(torch.nn.Module):
         pred_cloud = pred_cloud * self.scale
         gt_cloud = gt_cloud * self.scale
 
-        return GriddingDistanceFunction.apply(pred_cloud, gt_cloud)
+        min_pred_x = torch.min(pred_cloud[:, :, 0])
+        max_pred_x = torch.max(pred_cloud[:, :, 0])
+        min_pred_y = torch.min(pred_cloud[:, :, 1])
+        max_pred_y = torch.max(pred_cloud[:, :, 1])
+        min_pred_z = torch.min(pred_cloud[:, :, 2])
+        max_pred_z = torch.max(pred_cloud[:, :, 2])
+
+        min_gt_x = torch.min(gt_cloud[:, :, 0])
+        max_gt_x = torch.max(gt_cloud[:, :, 0])
+        min_gt_y = torch.min(gt_cloud[:, :, 1])
+        max_gt_y = torch.max(gt_cloud[:, :, 1])
+        min_gt_z = torch.min(gt_cloud[:, :, 2])
+        max_gt_z = torch.max(gt_cloud[:, :, 2])
+
+        min_x = torch.floor(torch.min(min_pred_x, min_gt_x))
+        max_x = torch.ceil(torch.max(max_pred_x, max_gt_x))
+        min_y = torch.floor(torch.min(min_pred_y, min_gt_y))
+        max_y = torch.ceil(torch.max(max_pred_y, max_gt_y))
+        min_z = torch.floor(torch.min(min_pred_z, min_gt_z))
+        max_z = torch.ceil(torch.max(max_pred_z, max_gt_z))
+
+        _pred_clouds = torch.split(pred_cloud, 1, dim=0)
+        _gt_clouds = torch.split(gt_cloud, 1, dim=0)
+        pred_grids = []
+        gt_grids = []
+        for pc, gc in zip(_pred_clouds, _gt_clouds):
+            non_zeros = torch.sum(pc, dim=2).ne(0)
+            pc = pc[non_zeros].unsqueeze(dim=0)
+            non_zeros = torch.sum(gc, dim=2).ne(0)
+            gc = gc[non_zeros].unsqueeze(dim=0)
+            pred_grid, gt_grid = GriddingDistanceFunction.apply(min_x, max_x, min_y, max_y, min_z, max_z, pc, gc)
+            pred_grids.append(pred_grid)
+            gt_grids.append(gt_grid)
+
+        return torch.cat(pred_grids, dim=0).contiguous(), torch.cat(gt_grids, dim=0).contiguous()
 
 
 class GriddingLoss(torch.nn.Module):
@@ -151,8 +171,6 @@ class GriddingLoss(torch.nn.Module):
             scale = self.scales[i]
             alpha = self.alphas[i]
             gdist = self.gridding_dists[i]
-            pred_cloud = pred_cloud * scale
-            gt_cloud = gt_cloud * scale
             pred_grid, gt_grid = gdist(pred_cloud, gt_cloud)
 
             if gridding_loss is None:
