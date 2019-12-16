@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-09 19:50:33
+# @Last Modified time: 2019-12-16 10:57:38
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -133,3 +133,31 @@ class GriddingDistance(torch.nn.Module):
         gt_cloud = gt_cloud * self.scale
 
         return GriddingDistanceFunction.apply(pred_cloud, gt_cloud)
+
+
+class GriddingLoss(torch.nn.Module):
+    def __init__(self, scales=[], alphas=[]):
+        super(GriddingLoss, self).__init__()
+        self.scales = scales
+        self.alphas = alphas
+        self.gridding_dists = [GriddingDistance(scale=s) for s in scales]
+        self.l1_loss = torch.nn.L1Loss()
+
+    def forward(self, pred_cloud, gt_cloud):
+        gridding_loss = None
+        n_dists = len(self.scales)
+
+        for i in range(n_dists):
+            scale = self.scales[i]
+            alpha = self.alphas[i]
+            gdist = self.gridding_dists[i]
+            pred_cloud = pred_cloud * scale
+            gt_cloud = gt_cloud * scale
+            pred_grid, gt_grid = gdist(pred_cloud, gt_cloud)
+
+            if gridding_loss is None:
+                gridding_loss = alpha * self.l1_loss(pred_grid, gt_grid)
+            else:
+                gridding_loss += alpha * self.l1_loss(pred_grid, gt_grid)
+
+        return gridding_loss

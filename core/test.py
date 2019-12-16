@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 12:33:54
+# @Last Modified time: 2019-12-16 11:30:26
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -17,7 +17,7 @@ from time import time
 from tensorboardX import SummaryWriter
 
 from extensions.chamfer_dist import ChamferDistance
-from extensions.gridding import GriddingDistance
+from extensions.gridding import GriddingLoss
 from models.rgnet import RGNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
@@ -54,7 +54,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
-    l1_loss = torch.nn.L1Loss()
+    gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES, alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)
 
     # Testing loop
     n_samples = len(test_data_loader)
@@ -73,7 +73,9 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
             ptcloud = network(data)
             dist1, dist2 = chamfer_dist(ptcloud, data['gtcloud'])
-            _loss = torch.mean(dist1) + torch.mean(dist2)
+            closs = torch.mean(dist1) + torch.mean(dist2)
+            gloss = gridding_loss(ptcloud, data['gtcloud'])
+            _loss = closs + gloss
             test_losses.update(_loss.item() * 1000)
             _metrics = Metrics.get(ptcloud, data['gtcloud'])
             test_metrics.update(_metrics)
