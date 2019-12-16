@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 12:29:50
+# @Last Modified time: 2019-12-16 11:05:25
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -74,6 +74,13 @@ __C.MEMCACHED.ENABLED                            = False
 __C.MEMCACHED.LIBRARY_PATH                       = '/mnt/lustre/share/pymc/py3'
 __C.MEMCACHED.SERVER_CONFIG                      = '/mnt/lustre/share/memcached_client/server_list.conf'
 __C.MEMCACHED.CLIENT_CONFIG                      = '/mnt/lustre/share/memcached_client/client.conf'
+
+#
+# Network
+#
+__C.NETWORK                                      = edict()
+__C.NETWORK.GRIDDING_LOSS_SCALES                 = [128, 64, 32, 16]
+__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [200, 20, 5, 1]
 
 #
 # Train
