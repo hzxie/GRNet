@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 11:30:26
+# @Last Modified time: 2019-12-18 16:14:12
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -19,11 +19,12 @@ from tensorboardX import SummaryWriter
 from extensions.chamfer_dist import ChamferDistance
 from extensions.gridding import GriddingLoss
 from models.rgnet import RGNet
+from models.refiner import Refiner
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
 
-def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network=None):
+def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, rgnet=None, refiner=None):
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
 
@@ -39,18 +40,22 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
                                                        shuffle=False)
 
     # Setup networks and initialize networks
-    if network is None:
-        network = RGNet(cfg)
+    if rgnet is None or refiner is None:
+        rgnet = RGNet(cfg)
+        refiner = Refiner(cfg)
 
         if torch.cuda.is_available():
-            network = torch.nn.DataParallel(network).cuda()
+            rgnet = torch.nn.DataParallel(rgnet).cuda()
+            refiner = torch.nn.DataParallel(refiner).cuda()
 
         logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
-        network.load_state_dict(checkpoint['network'])
+        rgnet.load_state_dict(checkpoint['rgnet'])
+        refiner.load_state_dict(checkpoint['refiner'])
 
     # Switch models to evaluation mode
-    network.eval()
+    rgnet.eval()
+    refiner.eval()
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
@@ -58,7 +63,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
     # Testing loop
     n_samples = len(test_data_loader)
-    test_losses = AverageMeter()
+    test_losses = AverageMeter(['SparseLoss', 'DenseLoss'])
     test_metrics = AverageMeter(Metrics.names())
     category_metrics = dict()
 
@@ -71,13 +76,13 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
             for k, v in data.items():
                 data[k] = utils.helpers.var_or_cuda(v)
 
-            ptcloud = network(data)
-            dist1, dist2 = chamfer_dist(ptcloud, data['gtcloud'])
-            closs = torch.mean(dist1) + torch.mean(dist2)
-            gloss = gridding_loss(ptcloud, data['gtcloud'])
-            _loss = closs + gloss
-            test_losses.update(_loss.item() * 1000)
-            _metrics = Metrics.get(ptcloud, data['gtcloud'])
+            sparse_ptcloud, global_features = rgnet(data)
+            dense_ptcloud = refiner(sparse_ptcloud, global_features)
+            sparse_loss = chamfer_dist(sparse_ptcloud, data['gtcloud'])
+            dense_loss = chamfer_dist(dense_ptcloud, data['gtcloud'])
+            _loss = sparse_loss + dense_loss
+            test_losses.update([sparse_loss.item() * 1000, dense_loss.item() * 1000])
+            _metrics = Metrics.get(dense_ptcloud, data['gtcloud'])
             test_metrics.update(_metrics)
 
             if not taxonomy_id in category_metrics:
@@ -85,16 +90,19 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
             category_metrics[taxonomy_id].update(_metrics)
 
             if test_writer is not None and model_idx < 3:
-                pred_ptcloud = ptcloud.squeeze().cpu().numpy()
+                sparse_ptcloud = sparse_ptcloud.squeeze().cpu().numpy()
+                sparse_ptcloud_img = utils.helpers.get_ptcloud_img(sparse_ptcloud)
+                test_writer.add_image('Model%02d/SparseReconstruction' % model_idx, sparse_ptcloud_img, epoch_idx)
+                dense_ptcloud = dense_ptcloud.squeeze().cpu().numpy()
+                dense_ptcloud_img = utils.helpers.get_ptcloud_img(dense_ptcloud)
+                test_writer.add_image('Model%02d/DenseReconstruction' % model_idx, dense_ptcloud_img, epoch_idx)
                 gt_ptcloud = data['gtcloud'].squeeze().cpu().numpy()
-                pred_ptcloud_img = utils.helpers.get_ptcloud_img(pred_ptcloud)
-                test_writer.add_image('Model%02d/Reconstructed' % model_idx, pred_ptcloud_img, epoch_idx + 1)
                 gt_ptcloud_img = utils.helpers.get_ptcloud_img(gt_ptcloud)
-                test_writer.add_image('Model%02d/GroundTruth' % model_idx, gt_ptcloud_img, epoch_idx + 1)
+                test_writer.add_image('Model%02d/GroundTruth' % model_idx, gt_ptcloud_img, epoch_idx)
 
-            logging.info(
-                'Test[%d/%d] Taxonomy = %s Sample = %s Loss = %.4f Metrics = %s' %
-                (model_idx + 1, n_samples, taxonomy_id, model_id, test_losses.val(), ['%.4f' % m for m in _metrics]))
+            logging.info('Test[%d/%d] Taxonomy = %s Sample = %s Losses = %s Metrics = %s' %
+                         (model_idx + 1, n_samples, taxonomy_id, model_id, ['%.4f' % l for l in test_losses.val()
+                                                                            ], ['%.4f' % m for m in _metrics]))
 
     # Print testing results
     print('============================ TEST RESULTS ============================')
@@ -118,8 +126,9 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, network
 
     # Add testing results to TensorBoard
     if test_writer is not None:
-        test_writer.add_scalar('Loss/Epoch', test_losses.avg(), epoch_idx + 1)
+        test_writer.add_scalar('Loss/Epoch/Sparse', test_losses.avg(0), epoch_idx)
+        test_writer.add_scalar('Loss/Epoch/Dense', test_losses.avg(1), epoch_idx)
         for i, metric in enumerate(test_metrics.items):
-            test_writer.add_scalar('Metric/%s' % metric, test_metrics.avg(i), epoch_idx + 1)
+            test_writer.add_scalar('Metric/%s' % metric, test_metrics.avg(i), epoch_idx)
 
     return Metrics(cfg.TEST.METRIC_NAME, test_metrics.avg())

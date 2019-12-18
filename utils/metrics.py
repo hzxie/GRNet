@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 14:17:46
+# @Last Modified time: 2019-12-18 16:13:26
 # @Email:  cshzxie@gmail.com
 
 # import open3d
@@ -70,8 +70,7 @@ class Metrics(object):
     @classmethod
     def _get_chamfer_distance(cls, pred, gt):
         chamfer_distance = cls.ITEMS[1]['eval_object']
-        dist1, dist2 = chamfer_distance(pred, gt)
-        return (torch.mean(dist1) + torch.mean(dist2)).item() * 1000
+        return chamfer_distance(pred, gt).item() * 1000
 
     def __init__(self, metric_name, values):
         self._items = Metrics.items()
