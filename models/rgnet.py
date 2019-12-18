@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-15 17:39:52
+# @Last Modified time: 2019-12-18 16:09:12
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -11,10 +11,33 @@ import torch.nn.functional as F
 from extensions.gridding import Gridding, GriddingReverse
 
 
+class RandomSampling(torch.nn.Module):
+    def __init__(self, n_points):
+        super(RandomSampling, self).__init__()
+        self.n_points = n_points
+
+    def forward(self, pred_cloud, partial_cloud=None):
+        if not partial_cloud is None:
+            pred_cloud = torch.cat([partial_cloud, pred_cloud], dim=1)
+
+        _ptcloud = torch.split(pred_cloud, 1, dim=0)
+        ptclouds = []
+        for p in _ptcloud:
+            non_zeros = torch.sum(p, dim=2).ne(0)
+            p = p[non_zeros].unsqueeze(dim=0)
+            n_pts = p.size(1)
+            if n_pts < self.n_points:
+                rnd_idx = torch.cat([torch.randint(0, n_pts, (self.n_points, ))])
+            else:
+                rnd_idx = torch.randperm(p.size(1))[:self.n_points]
+            ptclouds.append(p[:, rnd_idx, :])
+
+        return torch.cat(ptclouds, dim=0).contiguous()
+
+
 class RGNet(torch.nn.Module):
     def __init__(self, cfg):
         super(RGNet, self).__init__()
-        self.cfg = cfg
         self.gridding = Gridding(scale=64)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
@@ -69,6 +92,7 @@ class RGNet(torch.nn.Module):
             torch.nn.ReLU()
         )
         self.gridding_rev = GriddingReverse(scale=64)
+        self.rnd_sampling = RandomSampling(2048)
 
     def forward(self, data):
         partial_cloud = data['partial_cloud']
@@ -94,9 +118,10 @@ class RGNet(torch.nn.Module):
         pt_features_32_r = self.dconv9(pt_features_16_r) + pt_features_32_l
         # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
         pt_features_64_r = self.dconv10(pt_features_32_r) + pt_features_64_l
-        # print(pt_features_32_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
-        ptcloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
-        # print(ptcloud.size())           # torch.Size([batch_size, 262144, 3])
+        # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
+        pred_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
+        # print(pred_cloud.size())        # torch.Size([batch_size, 262144, 3])
+        pred_cloud = self.rnd_sampling(partial_cloud, pred_cloud)
+        # print(pred_cloud.size())        # torch.Size([batch_size, 2048, 3])
 
-        return ptcloud
-
+        return pred_cloud, features

@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 17:32:04
+# @Last Modified time: 2019-12-18 16:43:14
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -87,11 +87,11 @@ __C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [1]
 # Train
 #
 __C.TRAIN                                        = edict()
-__C.TRAIN.BATCH_SIZE                             = 32
-__C.TRAIN.N_EPOCHS                               = 250
+__C.TRAIN.BATCH_SIZE                             = 2
+__C.TRAIN.N_EPOCHS                               = 150
 __C.TRAIN.SAVE_FREQ                              = 25
 __C.TRAIN.LEARNING_RATE                          = 1e-4
-__C.TRAIN.LR_MILESTONES                          = [150]
+__C.TRAIN.LR_MILESTONES                          = [50]
 __C.TRAIN.GAMMA                                  = .5
 __C.TRAIN.BETAS                                  = (.9, .999)
 __C.TRAIN.WEIGHT_DECAY                           = 5e-5

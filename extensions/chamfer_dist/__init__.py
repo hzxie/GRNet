@@ -2,12 +2,10 @@
 # @Author: Thibault GROUEIX
 # @Date:   2019-08-07 20:54:24
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 12:42:41
+# @Last Modified time: 2019-12-18 15:06:25
 # @Email:  cshzxie@gmail.com
 
-import sys
 import torch
-import numpy as np
 
 import chamfer
 
@@ -40,4 +38,5 @@ class ChamferDistance(torch.nn.Module):
             xyz1 = xyz1[non_zeros1].unsqueeze(dim=0)
             xyz2 = xyz2[non_zeros2].unsqueeze(dim=0)
 
-        return ChamferFunction.apply(xyz1, xyz2)
+        dist1, dist2 = ChamferFunction.apply(xyz1, xyz2)
+        return torch.mean(dist1) + torch.mean(dist2)
