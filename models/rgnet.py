@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-18 16:09:12
+# @Last Modified time: 2019-12-19 13:27:03
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -121,7 +121,7 @@ class RGNet(torch.nn.Module):
         # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
         pred_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
         # print(pred_cloud.size())        # torch.Size([batch_size, 262144, 3])
-        pred_cloud = self.rnd_sampling(partial_cloud, pred_cloud)
+        pred_cloud = self.rnd_sampling(pred_cloud, partial_cloud)
         # print(pred_cloud.size())        # torch.Size([batch_size, 2048, 3])
 
         return pred_cloud, features
