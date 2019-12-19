@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 21:23:59
+# @Last Modified time: 2019-12-19 13:26:38
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -132,12 +132,12 @@ class GriddingDistance(torch.nn.Module):
         min_gt_z = torch.min(gt_cloud[:, :, 2])
         max_gt_z = torch.max(gt_cloud[:, :, 2])
 
-        min_x = torch.floor(torch.min(min_pred_x, min_gt_x))
-        max_x = torch.ceil(torch.max(max_pred_x, max_gt_x))
-        min_y = torch.floor(torch.min(min_pred_y, min_gt_y))
-        max_y = torch.ceil(torch.max(max_pred_y, max_gt_y))
-        min_z = torch.floor(torch.min(min_pred_z, min_gt_z))
-        max_z = torch.ceil(torch.max(max_pred_z, max_gt_z))
+        min_x = torch.floor(torch.min(min_pred_x, min_gt_x)) - 1
+        max_x = torch.ceil(torch.max(max_pred_x, max_gt_x)) + 1
+        min_y = torch.floor(torch.min(min_pred_y, min_gt_y)) - 1
+        max_y = torch.ceil(torch.max(max_pred_y, max_gt_y)) + 1
+        min_z = torch.floor(torch.min(min_pred_z, min_gt_z)) - 1
+        max_z = torch.ceil(torch.max(max_pred_z, max_gt_z)) + 1
 
         _pred_clouds = torch.split(pred_cloud, 1, dim=0)
         _gt_clouds = torch.split(gt_cloud, 1, dim=0)
