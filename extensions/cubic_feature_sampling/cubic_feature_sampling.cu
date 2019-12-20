@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-12-19 20:36:36
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-19 22:06:14
+ * @Last Modified time: 2019-12-20 15:35:59
  * @Email:  cshzxie@gmail.com
  */
 
@@ -95,8 +95,8 @@ __global__ void cubic_feature_sampling_kernel(
     // Aggregating Features
     for (int j = 0; j < 8; ++j) {
       for (int k = 0; k < n_cubic_channels; ++k) {
-        int feature_idx   = i * 8 * n_cubic_channels + j * n_cubic_channels + k;
         int vertex_idx    = grid_pt_indexes[i * 8 + j];
+        int feature_idx   = i * 8 * n_cubic_channels + j * n_cubic_channels + k;
         float feature_val = cubic_features[k * cub_scale + vertex_idx];
         point_features[feature_idx] = feature_val;
       }
@@ -157,11 +157,13 @@ __global__ void cubic_feature_sampling_grad_kernel(
         continue;
       }
       for (int k = 0; k < n_cubic_channels; ++k) {
-        float grad_val = grad_point_features[i * 8 + n_cubic_channels +
-                                             j * n_cubic_channels + k];
-        atomicAdd(&(grad_ptcloud[i * 3 + 0]), grad_val);
-        atomicAdd(&(grad_ptcloud[i * 3 + 1]), grad_val);
-        atomicAdd(&(grad_ptcloud[i * 3 + 2]), grad_val);
+        int grad_idx   = i * 8 * n_cubic_channels + j * n_cubic_channels + k;
+        float grad_val = grad_point_features[grad_idx];
+        // Fix bugs: the gradients of ceil and floor functions are zeros.
+        // Ref: https://github.com/tensorflow/tensorflow/issues/897
+        // atomicAdd(&(grad_ptcloud[i * 3 + 0]), grad_val);
+        // atomicAdd(&(grad_ptcloud[i * 3 + 1]), grad_val);
+        // atomicAdd(&(grad_ptcloud[i * 3 + 2]), grad_val);
         atomicAdd(&(grad_cubic_features[k * cub_scale + vertex_idx]), grad_val);
       }
     }

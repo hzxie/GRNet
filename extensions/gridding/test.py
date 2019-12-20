@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-10 10:48:55
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-10 10:53:15
+# @Last Modified time: 2019-12-20 12:44:19
 # @Email:  cshzxie@gmail.com
 #
 # Note:
@@ -14,8 +14,8 @@ import torch
 
 from torch.autograd import gradcheck
 
-sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))
-from gridding import GriddingFunction, GriddingReverseFunction
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)))
+from extensions.gridding import GriddingFunction, GriddingReverseFunction
 
 x = torch.rand(2, 4, 4, 4)
 x.requires_grad = True

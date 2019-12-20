@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-19 16:55:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-19 21:23:30
+# @Last Modified time: 2019-12-20 15:42:22
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -12,7 +12,8 @@ import cubic_feature_sampling
 
 class CubicFeatureSamplingFunction(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, scale, ptcloud, cubic_features):
+    def forward(ctx, ptcloud, cubic_features):
+        scale = cubic_features.size(2)
         point_features, grid_pt_indexes = cubic_feature_sampling.forward(scale, ptcloud, cubic_features)
         ctx.save_for_backward(torch.Tensor([scale]), grid_pt_indexes)
         return point_features
@@ -23,14 +24,14 @@ class CubicFeatureSamplingFunction(torch.autograd.Function):
         scale = int(scale.item())
         grad_ptcloud, grad_cubic_features = cubic_feature_sampling.backward(scale, grad_point_features,
                                                                             grid_pt_indexes)
-        return None, grad_ptcloud, grad_cubic_features
+        return grad_ptcloud, grad_cubic_features
 
 
 class CubicFeatureSampling(torch.nn.Module):
     def __init__(self):
         super(CubicFeatureSampling, self).__init__()
 
-    def forward(self, scale, ptcloud, cubic_features):
-        h_scale = scale / 2
+    def forward(self, ptcloud, cubic_features):
+        h_scale = cubic_features.size(2) / 2
         ptcloud = ptcloud * h_scale + h_scale
-        return CubicFeatureSamplingFunction.apply(scale, ptcloud, cubic_features)
+        return CubicFeatureSamplingFunction.apply(ptcloud, cubic_features)
