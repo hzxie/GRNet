@@ -2,18 +2,19 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-19 13:27:03
+# @Last Modified time: 2019-12-20 15:47:09
 # @Email:  cshzxie@gmail.com
 
 import torch
 import torch.nn.functional as F
 
 from extensions.gridding import Gridding, GriddingReverse
+from extensions.cubic_feature_sampling import CubicFeatureSampling
 
 
-class RandomSampling(torch.nn.Module):
+class RandomPointSampling(torch.nn.Module):
     def __init__(self, n_points):
-        super(RandomSampling, self).__init__()
+        super(RandomPointSampling, self).__init__()
         self.n_points = n_points
 
     def forward(self, pred_cloud, partial_cloud=None):
@@ -92,7 +93,8 @@ class RGNet(torch.nn.Module):
             torch.nn.ReLU()
         )
         self.gridding_rev = GriddingReverse(scale=64)
-        self.rnd_sampling = RandomSampling(2048)
+        self.point_sampling = RandomPointSampling(n_points=2048)
+        self.feature_sampling = CubicFeatureSampling()
 
     def forward(self, data):
         partial_cloud = data['partial_cloud']
@@ -121,7 +123,9 @@ class RGNet(torch.nn.Module):
         # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
         pred_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
         # print(pred_cloud.size())        # torch.Size([batch_size, 262144, 3])
-        pred_cloud = self.rnd_sampling(pred_cloud, partial_cloud)
+        pred_cloud = self.point_sampling(pred_cloud, partial_cloud)
         # print(pred_cloud.size())        # torch.Size([batch_size, 2048, 3])
+        point_features = self.feature_sampling(pred_cloud, pt_features_32_r).view(-1, 2048, 256)
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 256])
 
-        return pred_cloud, features
+        return pred_cloud, point_features

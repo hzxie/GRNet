@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-19 13:26:22
+# @Last Modified time: 2019-12-20 15:54:46
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -81,7 +81,7 @@ __C.MEMCACHED.CLIENT_CONFIG                      = '/mnt/lustre/share/memcached_
 __C.NETWORK                                      = edict()
 __C.NETWORK.N_SAMPLING_POINTS                    = 2048
 __C.NETWORK.GRIDDING_LOSS_SCALES                 = [64]
-__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [1]
+__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [0.01]
 
 #
 # Train
