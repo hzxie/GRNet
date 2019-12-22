@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-20 17:03:15
+# @Last Modified time: 2019-12-23 00:52:42
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -101,7 +101,6 @@ def train_net(cfg):
     if 'WEIGHTS' in cfg.CONST:
         logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
-        init_epoch = checkpoint['epoch_index']
         best_metrics = Metrics(cfg.TEST.METRIC_NAME, checkpoint['best_metrics'])
         rgnet.load_state_dict(checkpoint['rgnet'])
         refiner.load_state_dict(checkpoint['refiner'])
