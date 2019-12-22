@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-18 16:14:15
+# @Last Modified time: 2019-12-20 17:03:15
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -140,8 +140,8 @@ def train_net(cfg):
             refiner_optimizer.step()
 
             n_itr = (epoch_idx - 1) * n_batches + batch_idx
-            train_writer.add_scalar('Loss/Batch/Sparse', sparse_loss.item(), n_itr)
-            train_writer.add_scalar('Loss/Batch/Dense', dense_loss.item(), n_itr)
+            train_writer.add_scalar('Loss/Batch/Sparse', sparse_loss.item() * 1000, n_itr)
+            train_writer.add_scalar('Loss/Batch/Dense', dense_loss.item() * 1000, n_itr)
 
             batch_time.update(time() - batch_end_time)
             batch_end_time = time()

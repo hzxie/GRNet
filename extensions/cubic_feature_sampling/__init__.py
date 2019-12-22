@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-19 16:55:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-20 15:42:22
+# @Last Modified time: 2019-12-20 17:06:28
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -22,6 +22,7 @@ class CubicFeatureSamplingFunction(torch.autograd.Function):
     def backward(ctx, grad_point_features):
         scale, grid_pt_indexes = ctx.saved_tensors
         scale = int(scale.item())
+        grad_point_features = grad_point_features.contiguous()
         grad_ptcloud, grad_cubic_features = cubic_feature_sampling.backward(scale, grad_point_features,
                                                                             grid_pt_indexes)
         return grad_ptcloud, grad_cubic_features
