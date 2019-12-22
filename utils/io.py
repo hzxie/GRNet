@@ -2,13 +2,14 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 15:41:27
+# @Last Modified time: 2019-12-22 14:01:43
 # @Email:  cshzxie@gmail.com
 
 import cv2
-import pcl
+import h5py
 import logging
 import numpy as np
+import pcl
 import pyexr
 import os
 import sys
@@ -38,6 +39,8 @@ class IO:
             return cls._read_exr(file_path)
         elif file_extension in ['.pcd']:
             return cls._read_pcd(file_path)
+        elif file_extension in ['.h5']:
+            return cls._read_h5(file_path)
         else:
             raise Exception('Unsupported file extension: %s' % file_extension)
 
@@ -100,3 +103,8 @@ class IO:
 
         # ptcloud = np.concatenate((ptcloud, np.array([[0, 0, 0]])), axis=0)
         return ptcloud
+
+    @classmethod
+    def _read_h5(cls, file_path):
+        f = h5py.File(file_path, 'r')
+        return f['data'][()]
