@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 15:51:29
+# @Last Modified time: 2019-12-22 14:06:26
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -142,6 +142,70 @@ class ShapeNetDataLoader(object):
         return file_list
 
 
+class Completion3DDataLoader(object):
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+        # Load the dataset indexing file
+        self.dataset_categories = []
+        with open(cfg.DATASETS.COMPLETION3D.CATEGORY_FILE_PATH) as f:
+            self.dataset_categories = json.loads(f.read())
+
+    def get_dataset(self, subset):
+        file_list = self._get_file_list(self.cfg, self._get_subset(subset))
+        transforms = self._get_transforms(self.cfg, subset)
+        required_items = ['partial_cloud'] if subset == DatasetSubset.TEST else ['partial_cloud', 'gtcloud']
+
+        return Dataset({
+            'required_items': required_items,
+            'shuffle': subset == DatasetSubset.TRAIN
+        }, file_list, transforms)
+
+    def _get_transforms(self, cfg, subset):
+        return utils.data_transforms.Compose([{
+            'callback': 'RandomSamplePoints',
+            'parameters': {
+                'n_points': cfg.CONST.N_INPUT_POINTS
+            },
+            'objects': ['partial_cloud']
+        }, {
+            'callback': 'ToTensor',
+            'parameters': None,
+            'objects': ['partial_cloud', 'gtcloud']
+        }])
+
+    def _get_subset(self, subset):
+        if subset == DatasetSubset.TRAIN:
+            return 'train'
+        elif subset == DatasetSubset.VAL:
+            return 'val'
+        else:
+            return 'test'
+
+    def _get_file_list(self, cfg, subset):
+        """Prepare file list for the dataset"""
+        file_list = []
+
+        for dc in self.dataset_categories:
+            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
+            samples = dc[subset]
+
+            for s in tqdm(samples, leave=False):
+                file_list.append({
+                    'taxonomy_id':
+                    dc['taxonomy_id'],
+                    'model_id':
+                    s,
+                    'partial_cloud_path':
+                    cfg.DATASETS.COMPLETION3D.PARTIAL_POINTS_PATH % (subset, dc['taxonomy_id'], s),
+                    'gtcloud_path':
+                    cfg.DATASETS.COMPLETION3D.COMPLETE_POINTS_PATH % (subset, dc['taxonomy_id'], s),
+                })
+
+        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
+        return file_list
+
+
 class ShapeNetRgbdDataLoader(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -262,6 +326,8 @@ class ShapeNetRgbdDataLoader(object):
 # //////////////////////////////////////////// = Dataset Loader Mapping = //////////////////////////////////////////// #
 
 DATASET_LOADER_MAPPING = {
+    'Completion3D': Completion3DDataLoader,
     'ShapeNet': ShapeNetDataLoader,
+    'ShapeNetCars': ShapeNetDataLoader,
     'ShapeNetRGBD': ShapeNetRgbdDataLoader,
 } # yapf: disable

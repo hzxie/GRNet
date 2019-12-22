@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-20 15:54:46
+# @Last Modified time: 2019-12-22 14:09:05
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -16,6 +16,10 @@ cfg                                              = __C
 # Dataset Config
 #
 __C.DATASETS                                     = edict()
+__C.DATASETS.COMPLETION3D                        = edict()
+__C.DATASETS.COMPLETION3D.CATEGORY_FILE_PATH     = './datasets/Completion3D.json'
+__C.DATASETS.COMPLETION3D.PARTIAL_POINTS_PATH    = '/home/SENSETIME/xiehaozhe/Datasets/Completion3D/%s/partial/%s/%s.h5'
+__C.DATASETS.COMPLETION3D.COMPLETE_POINTS_PATH   = '/home/SENSETIME/xiehaozhe/Datasets/Completion3D/%s/gt/%s/%s.h5'
 __C.DATASETS.SHAPENET                            = edict()
 __C.DATASETS.SHAPENET.CATEGORY_FILE_PATH         = './datasets/ShapeNet.json'
 __C.DATASETS.SHAPENET.N_RENDERINGS               = 8
@@ -44,9 +48,9 @@ __C.DATASETS.SHAPENET_RGBD.POINTS_PATH           = '/home/SENSETIME/xiehaozhe/Da
 __C.DATASET                                      = edict()
 __C.DATASET.MEAN                                 = [0.5, 0.5, 0.5]
 __C.DATASET.STD                                  = [0.5, 0.5, 0.5]
-# Dataset Options: ShapeNet, ShapeNetCars, ShapeNetRGBD, KITTI
-__C.DATASET.TRAIN_DATASET                        = 'ShapeNet'
-__C.DATASET.TEST_DATASET                         = 'ShapeNet'
+# Dataset Options: Completion3D, ShapeNet, ShapeNetCars, ShapeNetRGBD, KITTI
+__C.DATASET.TRAIN_DATASET                        = 'Completion3D'
+__C.DATASET.TEST_DATASET                         = 'Completion3D'
 
 #
 # Constants
@@ -80,8 +84,8 @@ __C.MEMCACHED.CLIENT_CONFIG                      = '/mnt/lustre/share/memcached_
 #
 __C.NETWORK                                      = edict()
 __C.NETWORK.N_SAMPLING_POINTS                    = 2048
-__C.NETWORK.GRIDDING_LOSS_SCALES                 = [64]
-__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [0.01]
+__C.NETWORK.GRIDDING_LOSS_SCALES                 = [128]
+__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [0.1]
 
 #
 # Train
