@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-23 00:52:42
+# @Last Modified time: 2019-12-23 11:47:53
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -10,7 +10,6 @@ import os
 import torch
 
 import utils.data_loaders
-import utils.data_transforms
 import utils.helpers
 
 from datetime import datetime
