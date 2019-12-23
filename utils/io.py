@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-22 14:01:43
+# @Last Modified time: 2019-12-23 12:12:23
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -41,6 +41,15 @@ class IO:
             return cls._read_pcd(file_path)
         elif file_extension in ['.h5']:
             return cls._read_h5(file_path)
+        else:
+            raise Exception('Unsupported file extension: %s' % file_extension)
+
+    @classmethod
+    def put(cls, file_path, file_content):
+        _, file_extension = os.path.splitext(file_path)
+
+        if file_extension in ['.h5']:
+            return cls._write_h5(file_path, file_content)
         else:
             raise Exception('Unsupported file extension: %s' % file_extension)
 
@@ -108,3 +117,8 @@ class IO:
     def _read_h5(cls, file_path):
         f = h5py.File(file_path, 'r')
         return f['data'][()]
+
+    @classmethod
+    def _write_h5(cls, file_path, file_content):
+        with h5py.File(file_path, "w") as f:
+            f.create_dataset("data", data=file_content)
