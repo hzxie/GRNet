@@ -2,10 +2,11 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-23 11:46:33
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-23 12:22:05
+# @Last Modified time: 2019-12-23 17:37:23
 # @Email:  cshzxie@gmail.com
 
 import logging
+import numpy as np
 import os
 import torch
 
@@ -64,9 +65,12 @@ def inference_net(cfg):
             dense_ptcloud = refiner(sparse_ptcloud, global_features)
             output_folder = os.path.join(cfg.DIR.OUT_PATH, 'benchmark', taxonomy_id)
             if not os.path.exists(output_folder):
-            	os.makedirs(output_folder)
+                os.makedirs(output_folder)
             
             output_file_path = os.path.join(output_folder, '%s.h5' % model_id)
-            utils.io.IO.put(output_file_path, dense_ptcloud.squeeze().cpu().numpy())
+            ptcloud = dense_ptcloud.squeeze().cpu().numpy()
+            choice = np.random.permutation(ptcloud.shape[0])
+            ptcloud = ptcloud[choice[:2500]]
+            utils.io.IO.put(output_file_path, ptcloud)
 
             logging.info('Test[%d/%d] Taxonomy = %s Sample = %s File = %s' % (model_idx, n_samples, taxonomy_id, model_id, output_file_path))

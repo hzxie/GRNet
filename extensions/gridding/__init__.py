@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-15 20:33:52
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-19 13:26:38
+# @Last Modified time: 2019-12-23 16:35:19
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -115,8 +115,8 @@ class GriddingDistance(torch.nn.Module):
         pred_cloud(b, n_pts1, 3)
         gt_cloud(b, n_pts2, 3)
         '''
-        pred_cloud = pred_cloud * self.scale
-        gt_cloud = gt_cloud * self.scale
+        pred_cloud = pred_cloud * self.scale / 2
+        gt_cloud = gt_cloud * self.scale / 2
 
         min_pred_x = torch.min(pred_cloud[:, :, 0])
         max_pred_x = torch.max(pred_cloud[:, :, 0])
