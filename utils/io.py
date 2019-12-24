@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-23 12:12:23
+# @Last Modified time: 2019-12-24 14:33:17
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -116,7 +116,8 @@ class IO:
     @classmethod
     def _read_h5(cls, file_path):
         f = h5py.File(file_path, 'r')
-        return f['data'][()]
+        # Avoid overflow while gridding
+        return f['data'][()] * 0.9
 
     @classmethod
     def _write_h5(cls, file_path, file_content):
