@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-24 14:32:13
+# @Last Modified time: 2019-12-25 18:15:51
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -33,6 +33,8 @@ __C.DATASETS.SHAPENET_CAR.PARTIAL_POINTS_PATH    = '/home/SENSETIME/xiehaozhe/Da
 __C.DATASETS.SHAPENET_CAR.COMPLETE_POINTS_PATH   = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetCarCompletion/%s/complete/%s/%s.pcd'
 __C.DATASETS.KITTI                               = edict()
 __C.DATASETS.KITTI.CATEGORY_FILE_PATH            = './datasets/KITTI.json'
+__C.DATASETS.KITTI.PARTIAL_POINTS_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/KITTI/cars/%s.pcd'
+__C.DATASETS.KITTI.BOUNDING_BOX_FILE_PATH        = '/home/SENSETIME/xiehaozhe/Datasets/KITTI/bboxes/%s.txt'
 __C.DATASETS.SHAPENET_RGBD                       = edict()
 __C.DATASETS.SHAPENET_RGBD.CATEGORY_FILE_PATH    = './datasets/ShapeNet-RGBD.json'
 __C.DATASETS.SHAPENET_RGBD.N_RENDERINGS          = 24

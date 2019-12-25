@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-22 14:06:26
+# @Last Modified time: 2019-12-25 18:14:37
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -206,6 +206,72 @@ class Completion3DDataLoader(object):
         return file_list
 
 
+class KittiDataLoader(object):
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+        # Load the dataset indexing file
+        self.dataset_categories = []
+        with open(cfg.DATASETS.KITTI.CATEGORY_FILE_PATH) as f:
+            self.dataset_categories = json.loads(f.read())
+
+    def get_dataset(self, subset):
+        file_list = self._get_file_list(self.cfg, self._get_subset(subset))
+        transforms = self._get_transforms(self.cfg, subset)
+        required_items = ['partial_cloud', 'bounding_box']
+
+        return Dataset({'required_items': required_items, 'shuffle': False}, file_list, transforms)
+
+    def _get_transforms(self, cfg, subset):
+        return utils.data_transforms.Compose([{
+            'callback': 'NormalizeObjectPose',
+            'parameters': {
+                'input_keys': {
+                    'ptcloud': 'partial_cloud',
+                    'bbox': 'bounding_box'
+                }
+            },
+            'objects': ['partial_cloud', 'bounding_box']
+        }, {
+            'callback': 'RandomSamplePoints',
+            'parameters': {
+                'n_points': cfg.CONST.N_INPUT_POINTS
+            },
+            'objects': ['partial_cloud']
+        }, {
+            'callback': 'ToTensor',
+            'parameters': None,
+            'objects': ['partial_cloud', 'bounding_box']
+        }])
+
+    def _get_subset(self, subset):
+        if subset == DatasetSubset.TRAIN:
+            return 'train'
+        elif subset == DatasetSubset.VAL:
+            return 'val'
+        else:
+            return 'test'
+
+    def _get_file_list(self, cfg, subset):
+        """Prepare file list for the dataset"""
+        file_list = []
+
+        for dc in self.dataset_categories:
+            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
+            samples = dc[subset]
+
+            for s in tqdm(samples, leave=False):
+                file_list.append({
+                    'taxonomy_id': dc['taxonomy_id'],
+                    'model_id': s,
+                    'partial_cloud_path': cfg.DATASETS.KITTI.PARTIAL_POINTS_PATH % s,
+                    'bounding_box_path': cfg.DATASETS.KITTI.BOUNDING_BOX_FILE_PATH % s,
+                })
+
+        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
+        return file_list
+
+
 class ShapeNetRgbdDataLoader(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -330,4 +396,5 @@ DATASET_LOADER_MAPPING = {
     'ShapeNet': ShapeNetDataLoader,
     'ShapeNetCars': ShapeNetDataLoader,
     'ShapeNetRGBD': ShapeNetRgbdDataLoader,
+    'KITTI': KittiDataLoader
 } # yapf: disable

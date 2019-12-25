@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-16 15:51:36
+# @Last Modified time: 2019-12-25 18:06:03
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -17,19 +17,25 @@ class Compose(object):
         for tr in transforms:
             transformer = eval(tr['callback'])
             parameters = tr['parameters']
-            self.transformers.append({'callback': transformer(parameters), 'objects': tr['objects']})
+            self.transformers.append({
+                'callback': transformer(parameters),
+                'objects': tr['objects']
+            }) # yapf: disable
 
     def __call__(self, data):
         for tr in self.transformers:
             transform = tr['callback']
             objects = tr['objects']
             rnd_value = random.random()    # Random values for random crop and random flip
-            for k, v in data.items():
-                if k in objects and k in data:
-                    if transform.__class__ in [RandomCrop, RandomFlip]:
-                        data[k] = transform(v, rnd_value)
-                    else:
-                        data[k] = transform(v)
+            if transform.__class__ in [NormalizeObjectPose]:
+                data = transform(data)
+            else:
+                for k, v in data.items():
+                    if k in objects and k in data:
+                        if transform.__class__ in [RandomCrop, RandomFlip]:
+                            data[k] = transform(v, rnd_value)
+                        else:
+                            data[k] = transform(v)
 
         return data
 
@@ -155,3 +161,30 @@ class RandomSamplePoints(object):
             ptcloud = choice = np.concatenate([ptcloud, zeros])
 
         return ptcloud
+
+
+class NormalizeObjectPose(object):
+    def __init__(self, parameters):
+        input_keys = parameters['input_keys']
+        self.ptcloud_key = input_keys['ptcloud']
+        self.bbox_key = input_keys['bbox']
+
+    def __call__(self, data):
+        ptcloud = data[self.ptcloud_key]
+        bbox = data[self.bbox_key]
+
+        # Calculate center, rotation and scale
+        # References:
+        # - https://github.com/wentaoyuan/pcn/blob/master/test_kitti.py#L40-L52
+        center = (bbox.min(0) + bbox.max(0)) / 2
+        bbox -= center
+        yaw = np.arctan2(bbox[3, 1] - bbox[0, 1], bbox[3, 0] - bbox[0, 0])
+        rotation = np.array([[np.cos(yaw), -np.sin(yaw), 0], [np.sin(yaw), np.cos(yaw), 0], [0, 0, 1]])
+        bbox = np.dot(bbox, rotation)
+        scale = bbox[3, 0] - bbox[0, 0]
+        bbox /= scale
+        ptcloud = np.dot(ptcloud - center, rotation) / scale
+        ptcloud = np.dot(ptcloud, [[1, 0, 0], [0, 0, 1], [0, 1, 0]])
+
+        data[self.ptcloud_key] = ptcloud
+        return data
