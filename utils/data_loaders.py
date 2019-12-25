@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 18:14:37
+# @Last Modified time: 2019-12-25 18:32:41
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -140,6 +140,14 @@ class ShapeNetDataLoader(object):
 
         logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
         return file_list
+
+
+class ShapeNetCarsDataLoader(ShapeNetDataLoader):
+    def __init__(self, cfg):
+        super(ShapeNetCarsDataLoader, self).__init__(cfg)
+
+        # Remove other categories except cars
+        self.dataset_categories = [dc for dc in self.dataset_categories if dc['taxonomy_id'] == '02958343']
 
 
 class Completion3DDataLoader(object):
@@ -394,7 +402,7 @@ class ShapeNetRgbdDataLoader(object):
 DATASET_LOADER_MAPPING = {
     'Completion3D': Completion3DDataLoader,
     'ShapeNet': ShapeNetDataLoader,
-    'ShapeNetCars': ShapeNetDataLoader,
+    'ShapeNetCars': ShapeNetCarsDataLoader,
     'ShapeNetRGBD': ShapeNetRgbdDataLoader,
     'KITTI': KittiDataLoader
 } # yapf: disable
