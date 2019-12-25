@@ -19,6 +19,7 @@ from time import time
 from models.rgnet import RGNet
 from models.refiner import Refiner
 
+
 def inference_net(cfg):
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
@@ -66,11 +67,12 @@ def inference_net(cfg):
             output_folder = os.path.join(cfg.DIR.OUT_PATH, 'benchmark', taxonomy_id)
             if not os.path.exists(output_folder):
                 os.makedirs(output_folder)
-            
+
             output_file_path = os.path.join(output_folder, '%s.h5' % model_id)
             ptcloud = dense_ptcloud.squeeze().cpu().numpy()
             choice = np.random.permutation(ptcloud.shape[0])
             ptcloud = ptcloud[choice[:2500]]
             utils.io.IO.put(output_file_path, ptcloud)
 
-            logging.info('Test[%d/%d] Taxonomy = %s Sample = %s File = %s' % (model_idx, n_samples, taxonomy_id, model_id, output_file_path))
+            logging.info('Test[%d/%d] Taxonomy = %s Sample = %s File = %s' %
+                         (model_idx, n_samples, taxonomy_id, model_id, output_file_path))

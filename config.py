@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 18:15:51
+# @Last Modified time: 2019-12-25 18:35:39
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -26,11 +26,6 @@ __C.DATASETS.SHAPENET.N_RENDERINGS               = 8
 __C.DATASETS.SHAPENET.N_POINTS                   = 16384
 __C.DATASETS.SHAPENET.PARTIAL_POINTS_PATH        = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetCompletion/%s/partial/%s/%s/%02d.pcd'
 __C.DATASETS.SHAPENET.COMPLETE_POINTS_PATH       = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetCompletion/%s/complete/%s/%s.pcd'
-__C.DATASETS.SHAPENET_CAR                        = edict()
-__C.DATASETS.SHAPENET_CAR.CATEGORY_FILE_PATH     = './datasets/ShapeNet-Car.json'
-__C.DATASETS.SHAPENET_CAR.N_POINTS               = 16384
-__C.DATASETS.SHAPENET_CAR.PARTIAL_POINTS_PATH    = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetCarCompletion/%s/partial/%s/%s/%02d.pcd'
-__C.DATASETS.SHAPENET_CAR.COMPLETE_POINTS_PATH   = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetCarCompletion/%s/complete/%s/%s.pcd'
 __C.DATASETS.KITTI                               = edict()
 __C.DATASETS.KITTI.CATEGORY_FILE_PATH            = './datasets/KITTI.json'
 __C.DATASETS.KITTI.PARTIAL_POINTS_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/KITTI/cars/%s.pcd'
@@ -51,8 +46,8 @@ __C.DATASET                                      = edict()
 __C.DATASET.MEAN                                 = [0.5, 0.5, 0.5]
 __C.DATASET.STD                                  = [0.5, 0.5, 0.5]
 # Dataset Options: Completion3D, ShapeNet, ShapeNetCars, ShapeNetRGBD, KITTI
-__C.DATASET.TRAIN_DATASET                        = 'Completion3D'
-__C.DATASET.TEST_DATASET                         = 'Completion3D'
+__C.DATASET.TRAIN_DATASET                        = 'ShapeNet'
+__C.DATASET.TEST_DATASET                         = 'ShapeNet'
 
 #
 # Constants
