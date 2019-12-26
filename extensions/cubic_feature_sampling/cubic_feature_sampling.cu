@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-12-19 20:36:36
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-20 15:35:59
+ * @Last Modified time: 2019-12-26 13:56:08
  * @Email:  cshzxie@gmail.com
  */
 
@@ -28,6 +28,8 @@ __device__ int compute_index(int offset_x,
 
 __global__ void cubic_feature_sampling_kernel(
   int scale,
+  int neighborhood_size,
+  int n_vertices,
   int n_pts,
   int n_cubic_channels,
   const float *__restrict__ ptcloud,
@@ -41,8 +43,8 @@ __global__ void cubic_feature_sampling_kernel(
 
   ptcloud += batch_index * n_pts * 3;
   cubic_features += batch_index * n_cubic_channels * cub_scale;
-  point_features += batch_index * n_pts * 8 * n_cubic_channels;
-  grid_pt_indexes += batch_index * n_pts * 8;
+  point_features += batch_index * n_pts * n_vertices * n_cubic_channels;
+  grid_pt_indexes += batch_index * n_pts * n_vertices;
 
   for (int i = index; i < n_pts; i += stride) {
     float pt_x = ptcloud[i * 3 + 0];
@@ -65,38 +67,33 @@ __global__ void cubic_feature_sampling_kernel(
       upper_z += 1;
     }
 
-    // Ignore points lies out of the grid
-    if (lower_x < 0 || lower_y < 0 || lower_z < 0 || upper_x >= scale ||
-        upper_y >= scale || upper_z >= scale) {
-      for (int j = 0; j < 8; ++j) {
-        grid_pt_indexes[i * 8 + j] = -1;
+    int ns         = neighborhood_size - 1;
+    int vertex_idx = 0;
+    for (int j = lower_x - ns; j <= upper_x + ns; ++j) {
+      for (int k = lower_y - ns; k <= upper_y + ns; ++k) {
+        for (int m = lower_z - ns; m <= upper_z + ns; ++m) {
+          if (j < 0 || j >= scale || k < 0 || k >= scale || m < 0 ||
+              m >= scale) {
+            // Ignore points lies out of the grid
+            grid_pt_indexes[i * n_vertices + vertex_idx++] = -1;
+          } else {
+            // Calcuating indexes for adjacent vertices
+            grid_pt_indexes[i * n_vertices + vertex_idx++] =
+              compute_index(j, k, m, scale);
+          }
+        }
       }
-      continue;
     }
 
-    // Calcuating indexes for adjacent vertices
-    grid_pt_indexes[i * 8 + 0] =
-      compute_index(lower_x, lower_y, lower_z, scale);
-    grid_pt_indexes[i * 8 + 1] =
-      compute_index(lower_x, lower_y, upper_z, scale);
-    grid_pt_indexes[i * 8 + 2] =
-      compute_index(lower_x, upper_y, lower_z, scale);
-    grid_pt_indexes[i * 8 + 3] =
-      compute_index(lower_x, upper_y, upper_z, scale);
-    grid_pt_indexes[i * 8 + 4] =
-      compute_index(upper_x, lower_y, lower_z, scale);
-    grid_pt_indexes[i * 8 + 5] =
-      compute_index(upper_x, lower_y, upper_z, scale);
-    grid_pt_indexes[i * 8 + 6] =
-      compute_index(upper_x, upper_y, lower_z, scale);
-    grid_pt_indexes[i * 8 + 7] =
-      compute_index(upper_x, upper_y, upper_z, scale);
-
-    // Aggregating Features
-    for (int j = 0; j < 8; ++j) {
+    // Gather Features
+    for (int j = 0; j < n_vertices; ++j) {
       for (int k = 0; k < n_cubic_channels; ++k) {
-        int vertex_idx    = grid_pt_indexes[i * 8 + j];
-        int feature_idx   = i * 8 * n_cubic_channels + j * n_cubic_channels + k;
+        int vertex_idx = grid_pt_indexes[i * n_vertices + j];
+        if (vertex_idx == -1) {
+          continue;
+        }
+        int feature_idx =
+          i * n_vertices * n_cubic_channels + j * n_cubic_channels + k;
         float feature_val = cubic_features[k * cub_scale + vertex_idx];
         point_features[feature_idx] = feature_val;
       }
@@ -106,6 +103,7 @@ __global__ void cubic_feature_sampling_kernel(
 
 std::vector<torch::Tensor> cubic_feature_sampling_cuda_forward(
   int scale,
+  int neighborhood_size,
   torch::Tensor ptcloud,
   torch::Tensor cubic_features,
   cudaStream_t stream) {
@@ -113,16 +111,18 @@ std::vector<torch::Tensor> cubic_feature_sampling_cuda_forward(
   int n_pts            = ptcloud.size(1);
   int n_cubic_channels = cubic_features.size(1);
 
-  torch::Tensor point_features = torch::zeros(
-    {batch_size, n_pts, 8, n_cubic_channels}, torch::CUDA(torch::kFloat));
+  int n_vertices = std::pow(neighborhood_size * 2, 3);
+  torch::Tensor point_features =
+    torch::zeros({batch_size, n_pts, n_vertices, n_cubic_channels},
+                 torch::CUDA(torch::kFloat));
   torch::Tensor grid_pt_indexes =
-    torch::zeros({batch_size, n_pts, 8}, torch::CUDA(torch::kInt));
+    torch::zeros({batch_size, n_pts, n_vertices}, torch::CUDA(torch::kInt));
 
   cubic_feature_sampling_kernel<<<batch_size, get_n_threads(n_pts), 0,
                                   stream>>>(
-    scale, n_pts, n_cubic_channels, ptcloud.data<float>(),
-    cubic_features.data<float>(), point_features.data<float>(),
-    grid_pt_indexes.data<int>());
+    scale, neighborhood_size, n_vertices, n_pts, n_cubic_channels,
+    ptcloud.data<float>(), cubic_features.data<float>(),
+    point_features.data<float>(), grid_pt_indexes.data<int>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
@@ -134,6 +134,8 @@ std::vector<torch::Tensor> cubic_feature_sampling_cuda_forward(
 
 __global__ void cubic_feature_sampling_grad_kernel(
   int scale,
+  int neighborhood_size,
+  int n_vertices,
   int n_pts,
   int n_cubic_channels,
   const float *__restrict__ grad_point_features,
@@ -145,19 +147,20 @@ __global__ void cubic_feature_sampling_grad_kernel(
   int stride      = blockDim.x;
   int cub_scale   = scale * scale * scale;
 
-  grad_point_features += batch_index * n_pts * 8 * n_cubic_channels;
-  grid_pt_indexes += batch_index * n_pts * 8;
+  grad_point_features += batch_index * n_pts * n_vertices * n_cubic_channels;
+  grid_pt_indexes += batch_index * n_pts * n_vertices;
   grad_ptcloud += batch_index * n_pts * 3;
   grad_cubic_features += batch_index * n_cubic_channels * cub_scale;
 
   for (int i = index; i < n_pts; i += stride) {
-    for (int j = 0; j < 8; ++j) {
-      int vertex_idx = grid_pt_indexes[i * 8 + j];
+    for (int j = 0; j < n_vertices; ++j) {
+      int vertex_idx = grid_pt_indexes[i * n_vertices + j];
       if (vertex_idx == -1) {
         continue;
       }
       for (int k = 0; k < n_cubic_channels; ++k) {
-        int grad_idx   = i * 8 * n_cubic_channels + j * n_cubic_channels + k;
+        int grad_idx =
+          i * n_vertices * n_cubic_channels + j * n_cubic_channels + k;
         float grad_val = grad_point_features[grad_idx];
         // Fix bugs: the gradients of ceil and floor functions are zeros.
         // Ref: https://github.com/tensorflow/tensorflow/issues/897
@@ -172,12 +175,14 @@ __global__ void cubic_feature_sampling_grad_kernel(
 
 std::vector<torch::Tensor> cubic_feature_sampling_cuda_backward(
   int scale,
+  int neighborhood_size,
   torch::Tensor grad_point_features,
   torch::Tensor grid_pt_indexes,
   cudaStream_t stream) {
   int batch_size       = grad_point_features.size(0);
   int n_cubic_channels = grad_point_features.size(3);
   int n_pts            = grid_pt_indexes.size(1);
+  int n_vertices       = std::pow(neighborhood_size * 2, 3);
 
   torch::Tensor grad_ptcloud =
     torch::zeros({batch_size, n_pts, 3}, torch::CUDA(torch::kFloat));
@@ -187,9 +192,9 @@ std::vector<torch::Tensor> cubic_feature_sampling_cuda_backward(
 
   cubic_feature_sampling_grad_kernel<<<batch_size, get_n_threads(n_pts), 0,
                                        stream>>>(
-    scale, n_pts, n_cubic_channels, grad_point_features.data<float>(),
-    grid_pt_indexes.data<int>(), grad_ptcloud.data<float>(),
-    grad_cubic_features.data<float>());
+    scale, neighborhood_size, n_vertices, n_pts, n_cubic_channels,
+    grad_point_features.data<float>(), grid_pt_indexes.data<int>(),
+    grad_ptcloud.data<float>(), grad_cubic_features.data<float>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
