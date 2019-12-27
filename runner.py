@@ -11,7 +11,7 @@ import cv2
 import logging
 import matplotlib
 import os
-# import open3d
+import open3d
 import sys
 import torch
 # Fix no $DISPLAY environment variable
