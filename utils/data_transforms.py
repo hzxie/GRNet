@@ -2,13 +2,14 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 18:06:03
+# @Last Modified time: 2019-12-27 11:27:03
 # @Email:  cshzxie@gmail.com
 
 import cv2
+import math
 import numpy as np
-import random
 import torch
+import transforms3d
 
 
 class Compose(object):
@@ -16,7 +17,7 @@ class Compose(object):
         self.transformers = []
         for tr in transforms:
             transformer = eval(tr['callback'])
-            parameters = tr['parameters']
+            parameters = tr['parameters'] if 'parameters' in tr else None
             self.transformers.append({
                 'callback': transformer(parameters),
                 'objects': tr['objects']
@@ -26,13 +27,15 @@ class Compose(object):
         for tr in self.transformers:
             transform = tr['callback']
             objects = tr['objects']
-            rnd_value = random.random()    # Random values for random crop and random flip
+            rnd_value = np.random.uniform(0, 1)
             if transform.__class__ in [NormalizeObjectPose]:
                 data = transform(data)
             else:
                 for k, v in data.items():
                     if k in objects and k in data:
-                        if transform.__class__ in [RandomCrop, RandomFlip]:
+                        if transform.__class__ in [
+                                RandomCrop, RandomFlip, RandomRotatePoints, RandomScalePoints, RandomMirrorPoints
+                        ]:
                             data[k] = transform(v, rnd_value)
                         else:
                             data[k] = transform(v)
@@ -160,6 +163,62 @@ class RandomSamplePoints(object):
             zeros = np.zeros((self.n_points - ptcloud.shape[0], 3))
             ptcloud = choice = np.concatenate([ptcloud, zeros])
 
+        return ptcloud
+
+
+class RandomClipPoints(object):
+    def __init__(self, parameters):
+        self.sigma = parameters['sigma'] if 'sigma' in parameters else 0.01
+        self.clip = parameters['clip'] if 'clip' in parameters else 0.05
+
+    def __call__(self, ptcloud):
+        ptcloud += np.clip(self.sigma * np.random.randn(*ptcloud.shape), -self.clip, self.clip).astype(np.float32)
+        return ptcloud
+
+
+class RandomRotatePoints(object):
+    def __init__(self, parameters):
+        pass
+
+    def __call__(self, ptcloud, rnd_value):
+        trfm_mat = transforms3d.zooms.zfdir2mat(1)
+        angle = 2 * math.pi * rnd_value
+        trfm_mat = np.dot(transforms3d.axangles.axangle2mat([0, 1, 0], angle), trfm_mat)
+
+        ptcloud[:, :3] = np.dot(ptcloud[:, :3], trfm_mat.T)
+        return ptcloud
+
+
+class RandomScalePoints(object):
+    def __init__(self, parameters):
+        self.scale = parameters['scale']
+
+    def __call__(self, ptcloud, rnd_value):
+        trfm_mat = transforms3d.zooms.zfdir2mat(1)
+        scale = np.random.uniform(1.0 / self.scale * rnd_value, self.scale * rnd_value)
+        trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(scale), trfm_mat)
+
+        ptcloud[:, :3] = np.dot(ptcloud[:, :3], trfm_mat.T)
+        return ptcloud
+
+
+class RandomMirrorPoints(object):
+    def __init__(self, parameters):
+        pass
+
+    def __call__(self, ptcloud, rnd_value):
+        trfm_mat = transforms3d.zooms.zfdir2mat(1)
+        trfm_mat_x = np.dot(transforms3d.zooms.zfdir2mat(-1, [1, 0, 0]), trfm_mat)
+        trfm_mat_z = np.dot(transforms3d.zooms.zfdir2mat(-1, [0, 0, 1]), trfm_mat)
+        if rnd_value <= 0.25:
+            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [1, 0, 0]), trfm_mat)
+            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [0, 0, 1]), trfm_mat)
+        elif rnd_value > 0.25 and rnd_value <= 0.5:
+            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [1, 0, 0]), trfm_mat)
+        elif rnd_value > 0.5 and rnd_value <= 0.75:
+            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [0, 0, 1]), trfm_mat)
+
+        ptcloud[:, :3] = np.dot(ptcloud[:, :3], trfm_mat.T)
         return ptcloud
 
 
