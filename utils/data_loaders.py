@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 18:32:41
+# @Last Modified time: 2019-12-27 11:31:27
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -96,17 +96,47 @@ class ShapeNetDataLoader(object):
         }, file_list, transforms)
 
     def _get_transforms(self, cfg, subset):
-        return utils.data_transforms.Compose([{
-            'callback': 'RandomSamplePoints',
-            'parameters': {
-                'n_points': cfg.CONST.N_INPUT_POINTS
-            },
-            'objects': ['partial_cloud']
-        }, {
-            'callback': 'ToTensor',
-            'parameters': None,
-            'objects': ['partial_cloud', 'gtcloud']
-        }])
+        if subset == DatasetSubset.TRAIN:
+            return utils.data_transforms.Compose([{
+                'callback': 'RandomSamplePoints',
+                'parameters': {
+                    'n_points': cfg.CONST.N_INPUT_POINTS
+                },
+                'objects': ['partial_cloud']
+            }, {
+                'callback': 'RandomRotatePoints',
+                'objects': ['partial_cloud', 'gtcloud']
+            }, {
+                'callback': 'RandomClipPoints',
+                'parameters': {
+                    'sigma': 0.01,
+                    'clip': 0.05
+                },
+                'objects': ['partial_cloud']
+            }, {
+                'callback': 'RandomMirrorPoints',
+                'objects': ['partial_cloud', 'gtcloud']
+            }, {
+                'callback': 'RandomScalePoints',
+                'parameters': {
+                    'scale': 2
+                },
+                'objects': ['partial_cloud', 'gtcloud']
+            }, {
+                'callback': 'ToTensor',
+                'objects': ['partial_cloud', 'gtcloud']
+            }])
+        else:
+            return utils.data_transforms.Compose([{
+                'callback': 'RandomSamplePoints',
+                'parameters': {
+                    'n_points': cfg.CONST.N_INPUT_POINTS
+                },
+                'objects': ['partial_cloud']
+            }, {
+                'callback': 'ToTensor',
+                'objects': ['partial_cloud', 'gtcloud']
+            }])
 
     def _get_subset(self, subset):
         if subset == DatasetSubset.TRAIN:
@@ -170,17 +200,41 @@ class Completion3DDataLoader(object):
         }, file_list, transforms)
 
     def _get_transforms(self, cfg, subset):
-        return utils.data_transforms.Compose([{
-            'callback': 'RandomSamplePoints',
-            'parameters': {
-                'n_points': cfg.CONST.N_INPUT_POINTS
-            },
-            'objects': ['partial_cloud']
-        }, {
-            'callback': 'ToTensor',
-            'parameters': None,
-            'objects': ['partial_cloud', 'gtcloud']
-        }])
+        if subset == DatasetSubset.TRAIN:
+            return utils.data_transforms.Compose([{
+                'callback': 'RandomSamplePoints',
+                'parameters': {
+                    'n_points': cfg.CONST.N_INPUT_POINTS
+                },
+                'objects': ['partial_cloud']
+            }, {
+                'callback': 'RandomRotatePoints',
+                'objects': ['partial_cloud', 'gtcloud']
+            }, {
+                'callback': 'RandomClipPoints',
+                'parameters': {
+                    'sigma': 0.01,
+                    'clip': 0.05
+                },
+                'objects': ['partial_cloud']
+            }, {
+                'callback': 'RandomMirrorPoints',
+                'objects': ['partial_cloud', 'gtcloud']
+            }, {
+                'callback': 'ToTensor',
+                'objects': ['partial_cloud', 'gtcloud']
+            }])
+        else:
+            return utils.data_transforms.Compose([{
+                'callback': 'RandomSamplePoints',
+                'parameters': {
+                    'n_points': cfg.CONST.N_INPUT_POINTS
+                },
+                'objects': ['partial_cloud']
+            }, {
+                'callback': 'ToTensor',
+                'objects': ['partial_cloud', 'gtcloud']
+            }])
 
     def _get_subset(self, subset):
         if subset == DatasetSubset.TRAIN:
@@ -248,7 +302,6 @@ class KittiDataLoader(object):
             'objects': ['partial_cloud']
         }, {
             'callback': 'ToTensor',
-            'parameters': None,
             'objects': ['partial_cloud', 'bounding_box']
         }])
 
@@ -309,7 +362,6 @@ class ShapeNetRgbdDataLoader(object):
                 'objects': ['rgb_img', 'depth_img']
             }, {
                 'callback': 'RandomFlip',
-                'parameters': None,
                 'objects': ['rgb_img', 'depth_img']
             }, {
                 'callback': 'RandomBackground',
@@ -319,7 +371,6 @@ class ShapeNetRgbdDataLoader(object):
                 'objects': ['rgb_img']
             }, {
                 'callback': 'RandomPermuteRGB',
-                'parameters': None,
                 'objects': ['rgb_img']
             }, {
                 'callback': 'Normalize',
@@ -330,7 +381,6 @@ class ShapeNetRgbdDataLoader(object):
                 'objects': ['rgb_img']
             }, {
                 'callback': 'ToTensor',
-                'parameters': None,
                 'objects': ['rgb_img', 'depth_img', 'gtcloud']
             }])
         else:
@@ -356,7 +406,6 @@ class ShapeNetRgbdDataLoader(object):
                 'objects': ['rgb_img']
             }, {
                 'callback': 'ToTensor',
-                'parameters': None,
                 'objects': ['rgb_img', 'depth_img', 'gtcloud']
             }])
 
