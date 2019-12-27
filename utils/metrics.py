@@ -5,7 +5,7 @@
 # @Last Modified time: 2019-12-18 16:13:26
 # @Email:  cshzxie@gmail.com
 
-# import open3d
+import open3d
 import torch
 
 from extensions.chamfer_dist import ChamferDistance
