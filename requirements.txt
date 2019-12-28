@@ -1,7 +1,7 @@
 argparse
 easydict
 h5py
-matplotlib==3.0.3
+matplotlib
 numpy
 open3d-python
 opencv-python
@@ -11,4 +11,5 @@ python-pcl
 scipy
 tensorboardX==1.2
 torch>=1.0.0
+transforms3d
 tqdm
