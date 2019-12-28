@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-27 11:27:03
+# @Last Modified time: 2019-12-28 13:37:23
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -161,7 +161,7 @@ class RandomSamplePoints(object):
 
         if ptcloud.shape[0] < self.n_points:
             zeros = np.zeros((self.n_points - ptcloud.shape[0], 3))
-            ptcloud = choice = np.concatenate([ptcloud, zeros])
+            ptcloud = np.concatenate([ptcloud, zeros])
 
         return ptcloud
 
