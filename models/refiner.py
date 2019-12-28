@@ -12,21 +12,18 @@ class Refiner(torch.nn.Module):
     def __init__(self, cfg):
         super(Refiner, self).__init__()
         self.fc1 = torch.nn.Sequential(
-            torch.nn.Linear(768, 768),
-            torch.nn.BatchNorm1d(2048),
+            torch.nn.Linear(1792, 1792),
             torch.nn.ReLU()
         )
         self.fc2 = torch.nn.Sequential(
-            torch.nn.Linear(768, 384),
-            torch.nn.BatchNorm1d(2048),
+            torch.nn.Linear(1792, 448),
             torch.nn.ReLU()
         )
         self.fc3 = torch.nn.Sequential(
-            torch.nn.Linear(384, 192),
-            torch.nn.BatchNorm1d(2048),
+            torch.nn.Linear(448, 112),
             torch.nn.ReLU()
         )
-        self.fc4 = torch.nn.Linear(192, 24)
+        self.fc4 = torch.nn.Linear(112, 24)
 
     def forward(self, sparse_cloud, point_features):
         # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])

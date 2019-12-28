@@ -129,7 +129,9 @@ class RGNet(torch.nn.Module):
         # print(point_features_32.size())    # torch.Size([batch_size, 2048, 256])
         point_features_16 = self.feature_sampling(pred_cloud, pt_features_16_r).view(-1, 2048, 512)
         # print(point_features_16.size())    # torch.Size([batch_size, 2048, 512])
-        point_features = torch.cat([point_features_32, point_features_16], dim=2)
-        # print(point_features.size())       # torch.Size([batch_size, 2048, 768])
+        point_features_8 = self.feature_sampling(pred_cloud, pt_features_8_r).view(-1, 2048, 1024)
+        # print(point_features_8.size())    # torch.Size([batch_size, 2048, 256])
+        point_features = torch.cat([point_features_32, point_features_16, point_features_8], dim=2)
+        # print(point_features.size())       # torch.Size([batch_size, 2048, 1792])
 
         return pred_cloud, point_features
