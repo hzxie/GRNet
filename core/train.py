@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-23 11:47:53
+# @Last Modified time: 2019-12-28 23:07:50
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -153,7 +153,7 @@ def train_net(cfg):
         train_writer.add_scalar('Loss/Epoch/Sparse', losses.avg(0), epoch_idx)
         train_writer.add_scalar('Loss/Epoch/Dense', losses.avg(1), epoch_idx)
         logging.info(
-            'Epoch [%d/%d] EpochTime = %.3f (s) Losses = %s' %
+            '[Epoch %d/%d] EpochTime = %.3f (s) Losses = %s' %
             (epoch_idx, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, ['%.4f' % l for l in losses.avg()]))
 
         # Validate the current model
