@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-23 11:46:33
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-26 11:11:41
+# @Last Modified time: 2019-12-29 11:23:15
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -69,7 +69,7 @@ def inference_net(cfg):
                 os.makedirs(output_folder)
 
             output_file_path = os.path.join(output_folder, '%s.h5' % model_id)
-            utils.io.IO.put(output_file_path, ptcloud)
+            utils.io.IO.put(output_file_path, dense_ptcloud.squeeze().cpu().numpy())
 
             logging.info('Test[%d/%d] Taxonomy = %s Sample = %s File = %s' %
                          (model_idx, n_samples, taxonomy_id, model_id, output_file_path))

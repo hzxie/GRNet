@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 17:45:38
+# @Last Modified time: 2019-12-29 10:50:05
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -50,7 +50,9 @@ class IO:
     def put(cls, file_path, file_content):
         _, file_extension = os.path.splitext(file_path)
 
-        if file_extension in ['.h5']:
+        if file_extension in ['.pcd']:
+            return cls._write_pcd(file_path, file_content)
+        elif file_extension in ['.h5']:
             return cls._write_h5(file_path, file_content)
         else:
             raise Exception('Unsupported file extension: %s' % file_extension)
@@ -124,6 +126,12 @@ class IO:
     @classmethod
     def _read_txt(cls, file_path):
         return np.loadtxt(file_path)
+
+    @classmethod
+    def _write_pcd(cls, file_path, file_content):
+        pc = pcl.PointCloud()
+        pc.from_array(file_content)
+        pc.to_file(file_path.encode())
 
     @classmethod
     def _write_h5(cls, file_path, file_content):
