@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-30 09:56:06
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-30 11:31:51
+# @Last Modified time: 2019-12-30 17:12:56
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -28,12 +28,12 @@ class GriddingDistanceFunction(torch.autograd.Function):
         return pred_grid, gt_grid
 
     @staticmethod
-    def backward(ctx, pred_grad_grid, gt_grad_grid):
+    def backward(ctx, grad_pred_grid, grad_gt_grid):
         pred_grid_pt_weights, pred_grid_pt_indexes, gt_grid_pt_weights, gt_grid_pt_indexes = ctx.saved_tensors
 
-        grad_pred_cloud = gridding_distance.backward(pred_grid_pt_weights, pred_grid_pt_indexes, pred_grad_grid)
+        grad_pred_cloud = gridding_distance.backward(pred_grid_pt_weights, pred_grid_pt_indexes, grad_pred_grid)
         # print(grad_pred_cloud.size())     # torch.Size(batch_size, n_pts, 3)
-        grad_gt_cloud = gridding_distance.backward(gt_grid_pt_weights, gt_grid_pt_indexes, gt_grad_grid)
+        grad_gt_cloud = gridding_distance.backward(gt_grid_pt_weights, gt_grid_pt_indexes, grad_gt_grid)
         # print(grad_gt_cloud.size())       # torch.Size(batch_size, n_pts, 3)
 
         return None, None, None, None, None, None, grad_pred_cloud, grad_gt_cloud
@@ -67,11 +67,11 @@ class GriddingDistance(torch.nn.Module):
         max_gt_z = torch.max(gt_cloud[:, :, 2])
 
         min_x = torch.floor(torch.min(min_pred_x, min_gt_x)) - 1
-        max_x = torch.ceil(torch.max(max_pred_x, max_gt_x))
+        max_x = torch.ceil(torch.max(max_pred_x, max_gt_x)) + 1
         min_y = torch.floor(torch.min(min_pred_y, min_gt_y)) - 1
-        max_y = torch.ceil(torch.max(max_pred_y, max_gt_y))
+        max_y = torch.ceil(torch.max(max_pred_y, max_gt_y)) + 1
         min_z = torch.floor(torch.min(min_pred_z, min_gt_z)) - 1
-        max_z = torch.ceil(torch.max(max_pred_z, max_gt_z))
+        max_z = torch.ceil(torch.max(max_pred_z, max_gt_z)) + 1
 
         _pred_clouds = torch.split(pred_cloud, 1, dim=0)
         _gt_clouds = torch.split(gt_cloud, 1, dim=0)
