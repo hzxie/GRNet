@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-23 11:47:38
+# @Last Modified time: 2019-12-30 11:14:20
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -15,7 +15,7 @@ import utils.helpers
 from tensorboardX import SummaryWriter
 
 from extensions.chamfer_dist import ChamferDistance
-from extensions.gridding import GriddingLoss
+from extensions.gridding_loss import GriddingLoss
 from models.rgnet import RGNet
 from models.refiner import Refiner
 from utils.average_meter import AverageMeter
