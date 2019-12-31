@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-30 11:14:20
+# @Last Modified time: 2019-12-30 21:37:26
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -74,8 +74,8 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, rgnet=N
             for k, v in data.items():
                 data[k] = utils.helpers.var_or_cuda(v)
 
-            sparse_ptcloud, global_features = rgnet(data)
-            dense_ptcloud = refiner(sparse_ptcloud, global_features)
+            sparse_ptcloud, point_features = rgnet(data)
+            dense_ptcloud = refiner(sparse_ptcloud, point_features)
             sparse_loss = chamfer_dist(sparse_ptcloud, data['gtcloud'])
             dense_loss = chamfer_dist(dense_ptcloud, data['gtcloud'])
             _loss = sparse_loss + dense_loss

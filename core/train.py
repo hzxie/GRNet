@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-30 11:14:28
+# @Last Modified time: 2019-12-31 09:37:37
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -124,8 +124,8 @@ def train_net(cfg):
             for k, v in data.items():
                 data[k] = utils.helpers.var_or_cuda(v)
 
-            sparse_ptcloud, global_features = rgnet(data)
-            dense_ptcloud = refiner(sparse_ptcloud, global_features)
+            sparse_ptcloud, point_features = rgnet(data)
+            dense_ptcloud = refiner(sparse_ptcloud, point_features)
             sparse_loss = chamfer_dist(sparse_ptcloud, data['gtcloud'])
             dense_loss = chamfer_dist(dense_ptcloud, data['gtcloud'])
             _loss = sparse_loss + dense_loss
