@@ -3,11 +3,10 @@ easydict
 h5py
 matplotlib
 numpy
-open3d-python
+open3d==0.7.0.0
 opencv-python
 pprint
 pyexr
-python-pcl
 scipy
 tensorboardX==1.2
 torch>=1.0.0
