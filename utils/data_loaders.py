@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-28 10:08:09
+# @Last Modified time: 2019-12-31 09:36:46
 # @Email:  cshzxie@gmail.com
 
 import json
@@ -192,16 +192,6 @@ class Completion3DDataLoader(object):
                 },
                 'objects': ['partial_cloud']
             }, {
-                'callback': 'RandomRotatePoints',
-                'objects': ['partial_cloud', 'gtcloud']
-            }, {
-                'callback': 'RandomClipPoints',
-                'parameters': {
-                    'sigma': 0.01,
-                    'clip': 0.05
-                },
-                'objects': ['partial_cloud']
-            }, {
                 'callback': 'RandomMirrorPoints',
                 'objects': ['partial_cloud', 'gtcloud']
             }, {
@@ -316,126 +306,11 @@ class KittiDataLoader(object):
         logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
         return file_list
 
-
-class ShapeNetRgbdDataLoader(object):
-    def __init__(self, cfg):
-        self.cfg = cfg
-        # Load the dataset indexing file
-        self.dataset_categories = []
-        with open(cfg.DATASETS.SHAPENET.CATEGORY_FILE_PATH) as f:
-            self.dataset_categories = json.loads(f.read())
-
-    def get_dataset(self, subset):
-        file_list = self._get_file_list(self.cfg, self._get_subset(subset))
-        transforms = self._get_transforms(self.cfg, subset)
-        return Dataset(
-            {
-                'n_renderings': self.cfg.DATASETS.SHAPENET.N_RENDERINGS,
-                'required_items': ['rgb_img', 'depth_img', 'gtcloud'],
-                'shuffle': subset == DatasetSubset.TRAIN
-            }, file_list, transforms)
-
-    def _get_transforms(self, cfg, subset):
-        if subset == DatasetSubset.TRAIN:
-            return utils.data_transforms.Compose([{
-                'callback': 'RandomCrop',
-                'parameters': {
-                    'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
-                    'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
-                },
-                'objects': ['rgb_img', 'depth_img']
-            }, {
-                'callback': 'RandomFlip',
-                'objects': ['rgb_img', 'depth_img']
-            }, {
-                'callback': 'RandomBackground',
-                'parameters': {
-                    'bg_color': cfg.TRAIN.RANDOM_BG_COLOR
-                },
-                'objects': ['rgb_img']
-            }, {
-                'callback': 'RandomPermuteRGB',
-                'objects': ['rgb_img']
-            }, {
-                'callback': 'Normalize',
-                'parameters': {
-                    'mean': cfg.DATASET.MEAN,
-                    'std': cfg.DATASET.STD
-                },
-                'objects': ['rgb_img']
-            }, {
-                'callback': 'ToTensor',
-                'objects': ['rgb_img', 'depth_img', 'gtcloud']
-            }])
-        else:
-            return utils.data_transforms.Compose([{
-                'callback': 'CenterCrop',
-                'parameters': {
-                    'img_size': (cfg.CONST.IMG_H, cfg.CONST.IMG_W),
-                    'crop_size': (cfg.CONST.CROP_IMG_H, cfg.CONST.CROP_IMG_W)
-                },
-                'objects': ['rgb_img', 'depth_img']
-            }, {
-                'callback': 'RandomBackground',
-                'parameters': {
-                    'bg_color': cfg.TEST.RANDOM_BG_COLOR
-                },
-                'objects': ['rgb_img']
-            }, {
-                'callback': 'Normalize',
-                'parameters': {
-                    'mean': cfg.DATASET.MEAN,
-                    'std': cfg.DATASET.STD
-                },
-                'objects': ['rgb_img']
-            }, {
-                'callback': 'ToTensor',
-                'objects': ['rgb_img', 'depth_img', 'gtcloud']
-            }])
-
-    def _get_subset(self, subset):
-        if subset == DatasetSubset.TRAIN:
-            return 'train'
-        elif subset == DatasetSubset.VAL:
-            return 'val'
-        else:
-            return 'test'
-
-    def _get_file_list(self, cfg, subset):
-        """Prepare file list for the dataset"""
-        file_list = []
-
-        for dc in self.dataset_categories:
-            logging.info('Collecting files of Taxonomy [ID=%s, Name=%s]' % (dc['taxonomy_id'], dc['taxonomy_name']))
-            samples = dc[subset]
-            for s in tqdm(samples, leave=False):
-                file_list.append({
-                    'taxonomy_id':
-                    dc['taxonomy_id'],
-                    'model_id':
-                    s,
-                    'rgb_img_path': [
-                        cfg.DATASETS.SHAPENET.RGB_IMG_PATH % (dc['taxonomy_id'], s, i)
-                        for i in range(cfg.DATASETS.SHAPENET.N_RENDERINGS)
-                    ],
-                    'depth_img_path': [
-                        cfg.DATASETS.SHAPENET.DEPTH_IMG_PATH % (dc['taxonomy_id'], s, i)
-                        for i in range(cfg.DATASETS.SHAPENET.N_RENDERINGS)
-                    ],
-                    'gtcloud_path':
-                    cfg.DATASETS.SHAPENET.POINTS_PATH % (dc['taxonomy_id'], s),
-                })
-
-        logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
-        return file_list
-
-
 # //////////////////////////////////////////// = Dataset Loader Mapping = //////////////////////////////////////////// #
 
 DATASET_LOADER_MAPPING = {
     'Completion3D': Completion3DDataLoader,
     'ShapeNet': ShapeNetDataLoader,
     'ShapeNetCars': ShapeNetCarsDataLoader,
-    'ShapeNetRGBD': ShapeNetRgbdDataLoader,
     'KITTI': KittiDataLoader
 } # yapf: disable

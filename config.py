@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 18:35:39
+# @Last Modified time: 2019-12-31 09:41:39
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -30,14 +30,6 @@ __C.DATASETS.KITTI                               = edict()
 __C.DATASETS.KITTI.CATEGORY_FILE_PATH            = './datasets/KITTI.json'
 __C.DATASETS.KITTI.PARTIAL_POINTS_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/KITTI/cars/%s.pcd'
 __C.DATASETS.KITTI.BOUNDING_BOX_FILE_PATH        = '/home/SENSETIME/xiehaozhe/Datasets/KITTI/bboxes/%s.txt'
-__C.DATASETS.SHAPENET_RGBD                       = edict()
-__C.DATASETS.SHAPENET_RGBD.CATEGORY_FILE_PATH    = './datasets/ShapeNet-RGBD.json'
-__C.DATASETS.SHAPENET_RGBD.N_RENDERINGS          = 24
-__C.DATASETS.SHAPENET_RGBD.N_POINTS              = 16384
-__C.DATASETS.SHAPENET_RGBD.K                     = []
-__C.DATASETS.SHAPENET_RGBD.RGB_IMG_PATH          = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/render_%02d_l.png'
-__C.DATASETS.SHAPENET_RGBD.DEPTH_IMG_PATH        = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetStereoRendering/%s/%s/depth_%02d_l.exr'
-__C.DATASETS.SHAPENET_RGBD.POINTS_PATH           = '/home/SENSETIME/xiehaozhe/Datasets/ShapeNet/ShapeNetPoints/%s/%s.npy'
 
 #
 # Dataset
@@ -45,7 +37,7 @@ __C.DATASETS.SHAPENET_RGBD.POINTS_PATH           = '/home/SENSETIME/xiehaozhe/Da
 __C.DATASET                                      = edict()
 __C.DATASET.MEAN                                 = [0.5, 0.5, 0.5]
 __C.DATASET.STD                                  = [0.5, 0.5, 0.5]
-# Dataset Options: Completion3D, ShapeNet, ShapeNetCars, ShapeNetRGBD, KITTI
+# Dataset Options: Completion3D, ShapeNet, ShapeNetCars, KITTI
 __C.DATASET.TRAIN_DATASET                        = 'ShapeNet'
 __C.DATASET.TEST_DATASET                         = 'ShapeNet'
 
@@ -81,8 +73,8 @@ __C.MEMCACHED.CLIENT_CONFIG                      = '/mnt/lustre/share/memcached_
 #
 __C.NETWORK                                      = edict()
 __C.NETWORK.N_SAMPLING_POINTS                    = 2048
-__C.NETWORK.GRIDDING_LOSS_SCALES                 = [256, 128]
-__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [0.1, 0.01]
+__C.NETWORK.GRIDDING_LOSS_SCALES                 = [128]
+__C.NETWORK.GRIDDING_LOSS_ALPHAS                 = [0.1]
 
 #
 # Train
