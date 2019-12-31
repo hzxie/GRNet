@@ -2,15 +2,15 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-29 10:50:05
+# @Last Modified time: 2019-12-31 11:22:11
 # @Email:  cshzxie@gmail.com
 
 import cv2
 import h5py
 import logging
 import numpy as np
-import pcl
 import pyexr
+import open3d
 import os
 import sys
 
@@ -98,9 +98,8 @@ class IO:
     @classmethod
     def _read_pcd(cls, file_path):
         if mc_client is None:
-            pc = pcl.PointCloud()
-            pc.from_file(file_path.encode())
-            ptcloud = np.array(pc.to_list())
+            pc = open3d.io.read_point_cloud(file_path)
+            ptcloud = np.array(pc.points)
         else:
             pyvector = mc.pyvector()
             mc_client.Get(file_path, pyvector)
@@ -129,9 +128,9 @@ class IO:
 
     @classmethod
     def _write_pcd(cls, file_path, file_content):
-        pc = pcl.PointCloud()
-        pc.from_array(file_content)
-        pc.to_file(file_path.encode())
+        pc = open3d.geometry.PointCloud()
+        pc.points = open3d.utility.Vector3dVector(file_content)
+        open3d.io.write_point_cloud(file_path, pc)
 
     @classmethod
     def _write_h5(cls, file_path, file_content):

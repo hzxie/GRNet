@@ -2,12 +2,12 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-06 10:10:07
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-11-06 14:12:59
+# @Last Modified time: 2019-12-31 11:27:35
 # @Email:  cshzxie@gmail.com
 
 import numpy as np
 import os
-import pcl
+import open3d
 import sys
 
 from tqdm import tqdm
@@ -37,11 +37,11 @@ def main():
         if not os.path.exists(complete_output_folder):
             os.makedirs(complete_output_folder)
 
-        p = pcl.PointCloud()
-        p.from_array(d[1].astype(np.float32))
-        p.to_file(os.path.join(partial_output_folder, '%02d.pcd' % idx).encode())
-        p.from_array(d[2].astype(np.float32))
-        p.to_file(os.path.join(complete_output_folder, '%s.pcd' % model_id).encode())
+        p = open3d.geometry.PointCloud()
+        p.points = o3d.utility.Vector3dVector(d[1].astype(np.float32))
+        open3d.io.write_point_cloud(os.path.join(partial_output_folder, '%02d.pcd' % idx), p)
+        p.points = o3d.utility.Vector3dVector(d[2].astype(np.float32))
+        open3d.io.write_point_cloud(os.path.join(complete_output_folder, '%s.pcd' % model_id), p)
 
 
 if __name__ == '__main__':
