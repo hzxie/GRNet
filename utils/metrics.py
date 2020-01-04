@@ -2,9 +2,10 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-31 14:10:04
+# @Last Modified time: 2020-01-04 15:33:53
 # @Email:  cshzxie@gmail.com
 
+import logging
 import open3d
 import torch
 
@@ -80,12 +81,15 @@ class Metrics(object):
         if type(values).__name__ == 'list':
             self._values = values
         elif type(values).__name__ == 'dict':
-            item_indexes = {}
+            metric_indexes = {}
             for idx, item in enumerate(self._items):
                 item_name = item['name']
-                item_indexes[item_name] = idx
+                metric_indexes[item_name] = idx
             for k, v in values.items():
-                self._values[item_indexes[k]] = v
+                if not k in metric_indexes:
+                    logging.warn('Ignore Metric[Name=%s] due to disability.' % k)
+                    continue
+                self._values[metric_indexes[k]] = v
         else:
             raise Exception('Unsupported value type: %s' % type(values))
 
