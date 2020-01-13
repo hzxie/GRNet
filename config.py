@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-31 09:41:39
+# @Last Modified time: 2020-01-13 15:13:30
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -35,8 +35,6 @@ __C.DATASETS.KITTI.BOUNDING_BOX_FILE_PATH        = '/home/SENSETIME/xiehaozhe/Da
 # Dataset
 #
 __C.DATASET                                      = edict()
-__C.DATASET.MEAN                                 = [0.5, 0.5, 0.5]
-__C.DATASET.STD                                  = [0.5, 0.5, 0.5]
 # Dataset Options: Completion3D, ShapeNet, ShapeNetCars, KITTI
 __C.DATASET.TRAIN_DATASET                        = 'ShapeNet'
 __C.DATASET.TEST_DATASET                         = 'ShapeNet'
@@ -47,10 +45,6 @@ __C.DATASET.TEST_DATASET                         = 'ShapeNet'
 __C.CONST                                        = edict()
 __C.CONST.DEVICE                                 = '0'
 __C.CONST.NUM_WORKERS                            = 8
-__C.CONST.IMG_W                                  = 224
-__C.CONST.IMG_H                                  = 224
-__C.CONST.CROP_IMG_W                             = 210
-__C.CONST.CROP_IMG_H                             = 210
 __C.CONST.N_INPUT_POINTS                         = 2048
 
 #
@@ -88,11 +82,9 @@ __C.TRAIN.LR_MILESTONES                          = [50]
 __C.TRAIN.GAMMA                                  = .5
 __C.TRAIN.BETAS                                  = (.9, .999)
 __C.TRAIN.WEIGHT_DECAY                           = 0
-__C.TRAIN.RANDOM_BG_COLOR                        = [[225, 255], [225, 255], [225, 255]]
 
 #
 # Test
 #
 __C.TEST                                         = edict()
-__C.TEST.RANDOM_BG_COLOR                         = [[240, 240], [240, 240], [240, 240]]
 __C.TEST.METRIC_NAME                             = 'ChamferDistance'
