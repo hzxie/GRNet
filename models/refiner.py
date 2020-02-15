@@ -27,16 +27,17 @@ class Refiner(torch.nn.Module):
 
     def forward(self, sparse_cloud, point_features):
         # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
-        # print(point_features.size())    # torch.Size([batch_size, 2048, 768])
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 1792])
         point_features = self.fc1(point_features)
-        # print(point_features.size())    # torch.Size([batch_size, 2048, 768])
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 1792])
         point_features = self.fc2(point_features)
-        # print(point_features.size())    # torch.Size([batch_size, 2048, 384])
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 448])
         point_features = self.fc3(point_features)
-        # print(point_features.size())    # torch.Size([batch_size, 2048, 192])
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 112])
         point_offset = self.fc4(point_features).view(-1, 16384, 3)
         # print(point_features.size())    # torch.Size([batch_size, 16384, 3])
         sparse_cloud = sparse_cloud.unsqueeze(dim=2).repeat(1, 1, 8, 1).view(-1, 16384, 3)
         # print(sparse_cloud.size())      # torch.Size([batch_size, 16384, 3])
 
         return sparse_cloud + point_offset
+
