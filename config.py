@@ -2,10 +2,8 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-01-13 15:13:30
+# @Last Modified time: 2020-02-22 17:18:04
 # @Email:  cshzxie@gmail.com
-
-import logging
 
 from easydict import EasyDict as edict
 

@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-11-06 10:10:07
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-31 11:27:35
+# @Last Modified time: 2020-02-22 18:34:51
 # @Email:  cshzxie@gmail.com
 
 import numpy as np
@@ -38,9 +38,9 @@ def main():
             os.makedirs(complete_output_folder)
 
         p = open3d.geometry.PointCloud()
-        p.points = o3d.utility.Vector3dVector(d[1].astype(np.float32))
+        p.points = open3d.utility.Vector3dVector(d[1].astype(np.float32))
         open3d.io.write_point_cloud(os.path.join(partial_output_folder, '%02d.pcd' % idx), p)
-        p.points = o3d.utility.Vector3dVector(d[2].astype(np.float32))
+        p.points = open3d.utility.Vector3dVector(d[2].astype(np.float32))
         open3d.io.write_point_cloud(os.path.join(complete_output_folder, '%s.pcd' % model_id), p)
 
 

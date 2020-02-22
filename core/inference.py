@@ -2,19 +2,16 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-23 11:46:33
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 10:40:23
+# @Last Modified time: 2020-02-22 19:12:44
 # @Email:  cshzxie@gmail.com
 
 import logging
-import numpy as np
 import os
 import torch
 
 import utils.data_loaders
 import utils.helpers
 import utils.io
-
-from time import time
 
 from models.grnet import GRNet
 

@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 10:42:12
+# @Last Modified time: 2020-02-22 19:29:26
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -22,8 +22,6 @@ from extensions.gridding_loss import GriddingLoss
 from models.grnet import GRNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
-
-import matplotlib.pyplot as plt
 
 
 def train_net(cfg):
@@ -80,7 +78,8 @@ def train_net(cfg):
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
-    gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES, alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)
+    gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES,
+                                 alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)    # lgtm [py/unused-import]
 
     # Load pretrained model if exists
     init_epoch = 0
@@ -149,7 +148,7 @@ def train_net(cfg):
                 'epoch_index': epoch_idx,
                 'best_metrics': metrics.state_dict(),
                 'grnet': grnet.state_dict()
-            }, output_path) # yapf: disable
+            }, output_path)  # yapf: disable
 
             logging.info('Saved checkpoint to %s ...' % output_path)
             if metrics.better_than(best_metrics):

@@ -2,12 +2,11 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 10:22:03
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-31 11:22:11
+# @Last Modified time: 2020-02-22 19:13:01
 # @Email:  cshzxie@gmail.com
 
 import cv2
 import h5py
-import logging
 import numpy as np
 import pyexr
 import open3d

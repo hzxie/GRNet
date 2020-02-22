@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-30 09:56:06
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-30 17:12:56
+# @Last Modified time: 2020-02-22 19:19:43
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -102,7 +102,6 @@ class GriddingLoss(torch.nn.Module):
         n_dists = len(self.scales)
 
         for i in range(n_dists):
-            scale = self.scales[i]
             alpha = self.alphas[i]
             gdist = self.gridding_dists[i]
             pred_grid, gt_grid = gdist(pred_cloud, gt_cloud)
