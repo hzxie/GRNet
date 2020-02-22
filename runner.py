@@ -3,7 +3,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07:31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-23 11:10:17
+# @Last Modified time: 2020-02-22 10:34:38
 # @Email:  cshzxie@gmail.com
 
 import argparse
@@ -70,7 +70,7 @@ def main():
 if __name__ == '__main__':
     # Check python version
     if sys.version_info < (3, 0):
-        raise Exception("Please follow the installation instruction on https://github.com/hzxie/RGNet")
+        raise Exception("Please follow the installation instruction on https://github.com/hzxie/GRNet")
 
     logging.basicConfig(format='[%(levelname)s] %(asctime)s %(message)s', level=logging.DEBUG)
     main()

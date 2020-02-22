@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-30 21:37:26
+# @Last Modified time: 2020-02-22 10:40:55
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -16,13 +16,12 @@ from tensorboardX import SummaryWriter
 
 from extensions.chamfer_dist import ChamferDistance
 from extensions.gridding_loss import GriddingLoss
-from models.rgnet import RGNet
-from models.refiner import Refiner
+from models.grnet import GRNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
 
-def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, rgnet=None, refiner=None):
+def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, grnet=None):
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
 
@@ -38,22 +37,18 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, rgnet=N
                                                        shuffle=False)
 
     # Setup networks and initialize networks
-    if rgnet is None or refiner is None:
-        rgnet = RGNet(cfg)
-        refiner = Refiner(cfg)
+    if grnet is None:
+        grnet = GRNet(cfg)
 
         if torch.cuda.is_available():
-            rgnet = torch.nn.DataParallel(rgnet).cuda()
-            refiner = torch.nn.DataParallel(refiner).cuda()
+            grnet = torch.nn.DataParallel(grnet).cuda()
 
         logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
-        rgnet.load_state_dict(checkpoint['rgnet'])
-        refiner.load_state_dict(checkpoint['refiner'])
+        grnet.load_state_dict(checkpoint['grnet'])
 
     # Switch models to evaluation mode
-    rgnet.eval()
-    refiner.eval()
+    grnet.eval()
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
@@ -74,8 +69,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, rgnet=N
             for k, v in data.items():
                 data[k] = utils.helpers.var_or_cuda(v)
 
-            sparse_ptcloud, point_features = rgnet(data)
-            dense_ptcloud = refiner(sparse_ptcloud, point_features)
+            sparse_ptcloud, dense_ptcloud = grnet(data)
             sparse_loss = chamfer_dist(sparse_ptcloud, data['gtcloud'])
             dense_loss = chamfer_dist(dense_ptcloud, data['gtcloud'])
             _loss = sparse_loss + dense_loss

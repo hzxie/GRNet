@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-25 18:19:19
+# @Last Modified time: 2020-02-22 10:38:05
 # @Email:  cshzxie@gmail.com
 
 import torch
@@ -36,9 +36,9 @@ class RandomPointSampling(torch.nn.Module):
         return torch.cat(ptclouds, dim=0).contiguous()
 
 
-class RGNet(torch.nn.Module):
+class GRNet(torch.nn.Module):
     def __init__(self, cfg):
-        super(RGNet, self).__init__()
+        super(GRNet, self).__init__()
         self.gridding = Gridding(scale=64)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv3d(1, 32, kernel_size=4, padding=2),
@@ -95,6 +95,19 @@ class RGNet(torch.nn.Module):
         self.gridding_rev = GriddingReverse(scale=64)
         self.point_sampling = RandomPointSampling(n_points=2048)
         self.feature_sampling = CubicFeatureSampling()
+        self.fc11 = torch.nn.Sequential(
+            torch.nn.Linear(1792, 1792),
+            torch.nn.ReLU()
+        )
+        self.fc12 = torch.nn.Sequential(
+            torch.nn.Linear(1792, 448),
+            torch.nn.ReLU()
+        )
+        self.fc13 = torch.nn.Sequential(
+            torch.nn.Linear(448, 112),
+            torch.nn.ReLU()
+        )
+        self.fc14 = torch.nn.Linear(112, 24)
 
     def forward(self, data):
         partial_cloud = data['partial_cloud']
@@ -121,18 +134,28 @@ class RGNet(torch.nn.Module):
         # print(pt_features_32_r.size())  # torch.Size([batch_size, 32, 32, 32, 32])
         pt_features_64_r = self.dconv10(pt_features_32_r) + pt_features_64_l
         # print(pt_features_64_r.size())  # torch.Size([batch_size, 1, 64, 64, 64])
-        pred_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
-        # print(pred_cloud.size())        # torch.Size([batch_size, 262144, 3])
-        pred_cloud = self.point_sampling(pred_cloud, partial_cloud)
-        # print(pred_cloud.size())        # torch.Size([batch_size, 2048, 3])
-        point_features_32 = self.feature_sampling(pred_cloud, pt_features_32_r).view(-1, 2048, 256)
+        sparse_cloud = self.gridding_rev(pt_features_64_r.squeeze(dim=1))
+        # print(sparse_cloud.size())      # torch.Size([batch_size, 262144, 3])
+        sparse_cloud = self.point_sampling(sparse_cloud, partial_cloud)
+        # print(sparse_cloud.size())      # torch.Size([batch_size, 2048, 3])
+        point_features_32 = self.feature_sampling(sparse_cloud, pt_features_32_r).view(-1, 2048, 256)
         # print(point_features_32.size()) # torch.Size([batch_size, 2048, 256])
-        point_features_16 = self.feature_sampling(pred_cloud, pt_features_16_r).view(-1, 2048, 512)
+        point_features_16 = self.feature_sampling(sparse_cloud, pt_features_16_r).view(-1, 2048, 512)
         # print(point_features_16.size()) # torch.Size([batch_size, 2048, 512])
-        point_features_8 = self.feature_sampling(pred_cloud, pt_features_8_r).view(-1, 2048, 1024)
+        point_features_8 = self.feature_sampling(sparse_cloud, pt_features_8_r).view(-1, 2048, 1024)
         # print(point_features_8.size())  # torch.Size([batch_size, 2048, 1024])
         point_features = torch.cat([point_features_32, point_features_16, point_features_8], dim=2)
         # print(point_features.size())    # torch.Size([batch_size, 2048, 1792])
+        point_features = self.fc11(point_features)
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 1792])
+        point_features = self.fc12(point_features)
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 448])
+        point_features = self.fc13(point_features)
+        # print(point_features.size())    # torch.Size([batch_size, 2048, 112])
+        point_offset = self.fc14(point_features).view(-1, 16384, 3)
+        # print(point_features.size())    # torch.Size([batch_size, 16384, 3])
+        dense_cloud = sparse_cloud.unsqueeze(dim=2).repeat(1, 1, 8, 1).view(-1, 16384, 3) + point_offset
+        # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
-        return pred_cloud, point_features
+        return sparse_cloud, dense_cloud
 
