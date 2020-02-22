@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-12-23 11:46:33
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-01-04 18:57:43
+# @Last Modified time: 2020-02-22 10:40:23
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -16,8 +16,7 @@ import utils.io
 
 from time import time
 
-from models.rgnet import RGNet
-from models.refiner import Refiner
+from models.grnet import GRNet
 
 
 def inference_net(cfg):
@@ -35,22 +34,18 @@ def inference_net(cfg):
                                                    shuffle=False)
 
     # Setup networks and initialize networks
-    rgnet = RGNet(cfg)
-    refiner = Refiner(cfg)
+    grnet = GRNet(cfg)
 
     if torch.cuda.is_available():
-        rgnet = torch.nn.DataParallel(rgnet).cuda()
-        refiner = torch.nn.DataParallel(refiner).cuda()
+        grnet = torch.nn.DataParallel(grnet).cuda()
 
     # Load the pretrained model from a checkpoint
     logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
     checkpoint = torch.load(cfg.CONST.WEIGHTS)
-    rgnet.load_state_dict(checkpoint['rgnet'])
-    refiner.load_state_dict(checkpoint['refiner'])
+    grnet.load_state_dict(checkpoint['grnet'])
 
     # Switch models to evaluation mode
-    rgnet.eval()
-    refiner.eval()
+    grnet.eval()
 
     # The inference loop
     n_samples = len(test_data_loader)
@@ -62,8 +57,7 @@ def inference_net(cfg):
             for k, v in data.items():
                 data[k] = utils.helpers.var_or_cuda(v)
 
-            sparse_ptcloud, global_features = rgnet(data)
-            dense_ptcloud = refiner(sparse_ptcloud, global_features)
+            sparse_ptcloud, dense_ptcloud = grnet(data)
             output_folder = os.path.join(cfg.DIR.OUT_PATH, 'benchmark', taxonomy_id)
             if not os.path.exists(output_folder):
                 os.makedirs(output_folder)

@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-31 09:37:37
+# @Last Modified time: 2020-02-22 10:42:12
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -19,8 +19,7 @@ from tensorboardX import SummaryWriter
 from core.test import test_net
 from extensions.chamfer_dist import ChamferDistance
 from extensions.gridding_loss import GriddingLoss
-from models.rgnet import RGNet
-from models.refiner import Refiner
+from models.grnet import GRNet
 from utils.average_meter import AverageMeter
 from utils.metrics import Metrics
 
@@ -62,33 +61,22 @@ def train_net(cfg):
     val_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, 'test'))
 
     # Create the networks
-    rgnet = RGNet(cfg)
-    refiner = Refiner(cfg)
-    rgnet.apply(utils.helpers.init_weights)
-    refiner.apply(utils.helpers.init_weights)
-    logging.debug('Parameters in RGNet: %d.' % utils.helpers.count_parameters(rgnet))
-    logging.debug('Parameters in Refiner: %d.' % utils.helpers.count_parameters(refiner))
+    grnet = GRNet(cfg)
+    grnet.apply(utils.helpers.init_weights)
+    logging.debug('Parameters in GRNet: %d.' % utils.helpers.count_parameters(grnet))
 
     # Move the network to GPU if possible
     if torch.cuda.is_available():
-        rgnet = torch.nn.DataParallel(rgnet).cuda()
-        refiner = torch.nn.DataParallel(refiner).cuda()
+        grnet = torch.nn.DataParallel(grnet).cuda()
 
     # Create the optimizers
-    rgnet_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, rgnet.parameters()),
+    grnet_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, grnet.parameters()),
                                        lr=cfg.TRAIN.LEARNING_RATE,
                                        weight_decay=cfg.TRAIN.WEIGHT_DECAY,
                                        betas=cfg.TRAIN.BETAS)
-    refiner_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, refiner.parameters()),
-                                         lr=cfg.TRAIN.LEARNING_RATE,
-                                         weight_decay=cfg.TRAIN.WEIGHT_DECAY,
-                                         betas=cfg.TRAIN.BETAS)
-    rgnet_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(rgnet_optimizer,
+    grnet_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(grnet_optimizer,
                                                               milestones=cfg.TRAIN.LR_MILESTONES,
                                                               gamma=cfg.TRAIN.GAMMA)
-    refiner_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(refiner_optimizer,
-                                                                milestones=cfg.TRAIN.LR_MILESTONES,
-                                                                gamma=cfg.TRAIN.GAMMA)
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
@@ -101,8 +89,7 @@ def train_net(cfg):
         logging.info('Recovering from %s ...' % (cfg.CONST.WEIGHTS))
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
         best_metrics = Metrics(cfg.TEST.METRIC_NAME, checkpoint['best_metrics'])
-        rgnet.load_state_dict(checkpoint['rgnet'])
-        refiner.load_state_dict(checkpoint['refiner'])
+        grnet.load_state_dict(checkpoint['grnet'])
         logging.info('Recover complete. Current epoch = #%d; best metrics = %s.' % (init_epoch, best_metrics))
 
     # Training/Testing the network
@@ -114,8 +101,7 @@ def train_net(cfg):
         data_time = AverageMeter()
         losses = AverageMeter(['SparseLoss', 'DenseLoss'])
 
-        rgnet.train()
-        refiner.train()
+        grnet.train()
 
         batch_end_time = time()
         n_batches = len(train_data_loader)
@@ -124,18 +110,15 @@ def train_net(cfg):
             for k, v in data.items():
                 data[k] = utils.helpers.var_or_cuda(v)
 
-            sparse_ptcloud, point_features = rgnet(data)
-            dense_ptcloud = refiner(sparse_ptcloud, point_features)
+            sparse_ptcloud, dense_ptcloud = grnet(data)
             sparse_loss = chamfer_dist(sparse_ptcloud, data['gtcloud'])
             dense_loss = chamfer_dist(dense_ptcloud, data['gtcloud'])
             _loss = sparse_loss + dense_loss
             losses.update([sparse_loss.item() * 1000, dense_loss.item() * 1000])
 
-            rgnet.zero_grad()
-            refiner.zero_grad()
+            grnet.zero_grad()
             _loss.backward()
-            rgnet_optimizer.step()
-            refiner_optimizer.step()
+            grnet_optimizer.step()
 
             n_itr = (epoch_idx - 1) * n_batches + batch_idx
             train_writer.add_scalar('Loss/Batch/Sparse', sparse_loss.item() * 1000, n_itr)
@@ -147,8 +130,7 @@ def train_net(cfg):
                          (epoch_idx, cfg.TRAIN.N_EPOCHS, batch_idx + 1, n_batches, batch_time.val(), data_time.val(),
                           ['%.4f' % l for l in losses.val()]))
 
-        rgnet_lr_scheduler.step()
-        refiner_lr_scheduler.step()
+        grnet_lr_scheduler.step()
         epoch_end_time = time()
         train_writer.add_scalar('Loss/Epoch/Sparse', losses.avg(0), epoch_idx)
         train_writer.add_scalar('Loss/Epoch/Dense', losses.avg(1), epoch_idx)
@@ -157,7 +139,7 @@ def train_net(cfg):
             (epoch_idx, cfg.TRAIN.N_EPOCHS, epoch_end_time - epoch_start_time, ['%.4f' % l for l in losses.avg()]))
 
         # Validate the current model
-        metrics = test_net(cfg, epoch_idx, val_data_loader, val_writer, rgnet, refiner)
+        metrics = test_net(cfg, epoch_idx, val_data_loader, val_writer, grnet)
 
         # Save ckeckpoints
         if epoch_idx % cfg.TRAIN.SAVE_FREQ == 0 or metrics.better_than(best_metrics):
@@ -166,8 +148,7 @@ def train_net(cfg):
             torch.save({
                 'epoch_index': epoch_idx,
                 'best_metrics': metrics.state_dict(),
-                'rgnet': rgnet.state_dict(),
-                'refiner': refiner.state_dict()
+                'grnet': grnet.state_dict()
             }, output_path) # yapf: disable
 
             logging.info('Saved checkpoint to %s ...' % output_path)
