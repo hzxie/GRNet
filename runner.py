@@ -3,7 +3,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07:31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 10:34:38
+# @Last Modified time: 2020-02-22 19:28:24
 # @Email:  cshzxie@gmail.com
 
 import argparse
@@ -11,9 +11,9 @@ import cv2
 import logging
 import matplotlib
 import os
-import open3d
+import open3d    # lgtm [py/unused-import]
 import sys
-import torch
+import torch    # lgtm [py/unused-import]
 # Fix no $DISPLAY environment variable
 matplotlib.use('Agg')
 # Fix deadlock in DataLoader
@@ -57,7 +57,7 @@ def main():
     if not args.test and not args.inference:
         train_net(cfg)
     else:
-        if not 'WEIGHTS' in cfg.CONST or not os.path.exists(cfg.CONST.WEIGHTS):
+        if 'WEIGHTS' not in cfg.CONST or not os.path.exists(cfg.CONST.WEIGHTS):
             logging.error('Please specify the file path of checkpoint.')
             sys.exit(2)
 

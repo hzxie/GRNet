@@ -2,17 +2,14 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 10:40:55
+# @Last Modified time: 2020-02-22 19:29:37
 # @Email:  cshzxie@gmail.com
 
 import logging
-import os
 import torch
 
 import utils.data_loaders
 import utils.helpers
-
-from tensorboardX import SummaryWriter
 
 from extensions.chamfer_dist import ChamferDistance
 from extensions.gridding_loss import GriddingLoss
@@ -52,7 +49,8 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, grnet=N
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
-    gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES, alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)
+    gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES,
+                                 alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)    # lgtm [py/unused-import]
 
     # Testing loop
     n_samples = len(test_data_loader)
@@ -72,12 +70,11 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, grnet=N
             sparse_ptcloud, dense_ptcloud = grnet(data)
             sparse_loss = chamfer_dist(sparse_ptcloud, data['gtcloud'])
             dense_loss = chamfer_dist(dense_ptcloud, data['gtcloud'])
-            _loss = sparse_loss + dense_loss
             test_losses.update([sparse_loss.item() * 1000, dense_loss.item() * 1000])
             _metrics = Metrics.get(dense_ptcloud, data['gtcloud'])
             test_metrics.update(_metrics)
 
-            if not taxonomy_id in category_metrics:
+            if taxonomy_id not in category_metrics:
                 category_metrics[taxonomy_id] = AverageMeter(Metrics.names())
             category_metrics[taxonomy_id].update(_metrics)
 

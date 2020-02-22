@@ -2,12 +2,11 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-01-04 15:33:53
+# @Last Modified time: 2020-02-22 19:17:55
 # @Email:  cshzxie@gmail.com
 
 import logging
 import open3d
-import torch
 
 from extensions.chamfer_dist import ChamferDistance
 
@@ -86,7 +85,7 @@ class Metrics(object):
                 item_name = item['name']
                 metric_indexes[item_name] = idx
             for k, v in values.items():
-                if not k in metric_indexes:
+                if k not in metric_indexes:
                     logging.warn('Ignore Metric[Name=%s] due to disability.' % k)
                     continue
                 self._values[metric_indexes[k]] = v

@@ -2,19 +2,17 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-31 09:36:46
+# @Last Modified time: 2020-02-22 19:21:32
 # @Email:  cshzxie@gmail.com
 
 import json
 import logging
 import numpy as np
 import random
-import sys
 import torch.utils.data.dataset
 
 import utils.data_transforms
 
-from easydict import EasyDict as edict
 from enum import Enum, unique
 from tqdm import tqdm
 
@@ -306,6 +304,7 @@ class KittiDataLoader(object):
         logging.info('Complete collecting files of the dataset. Total files: %d' % len(file_list))
         return file_list
 
+
 # //////////////////////////////////////////// = Dataset Loader Mapping = //////////////////////////////////////////// #
 
 DATASET_LOADER_MAPPING = {
@@ -313,4 +312,4 @@ DATASET_LOADER_MAPPING = {
     'ShapeNet': ShapeNetDataLoader,
     'ShapeNetCars': ShapeNetCarsDataLoader,
     'KITTI': KittiDataLoader
-} # yapf: disable
+}  # yapf: disable

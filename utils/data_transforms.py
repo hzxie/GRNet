@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-02 14:38:36
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-28 13:37:23
+# @Last Modified time: 2020-02-22 19:21:21
 # @Email:  cshzxie@gmail.com
 
 import cv2
@@ -21,7 +21,7 @@ class Compose(object):
             self.transformers.append({
                 'callback': transformer(parameters),
                 'objects': tr['objects']
-            }) # yapf: disable
+            })  # yapf: disable
 
     def __call__(self, data):
         for tr in self.transformers:
@@ -211,12 +211,12 @@ class RandomMirrorPoints(object):
         trfm_mat_x = np.dot(transforms3d.zooms.zfdir2mat(-1, [1, 0, 0]), trfm_mat)
         trfm_mat_z = np.dot(transforms3d.zooms.zfdir2mat(-1, [0, 0, 1]), trfm_mat)
         if rnd_value <= 0.25:
-            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [1, 0, 0]), trfm_mat)
-            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [0, 0, 1]), trfm_mat)
+            trfm_mat = np.dot(trfm_mat_x, trfm_mat)
+            trfm_mat = np.dot(trfm_mat_z, trfm_mat)
         elif rnd_value > 0.25 and rnd_value <= 0.5:
-            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [1, 0, 0]), trfm_mat)
+            trfm_mat = np.dot(trfm_mat_x, trfm_mat)
         elif rnd_value > 0.5 and rnd_value <= 0.75:
-            trfm_mat = np.dot(transforms3d.zooms.zfdir2mat(-1, [0, 0, 1]), trfm_mat)
+            trfm_mat = np.dot(trfm_mat_z, trfm_mat)
 
         ptcloud[:, :3] = np.dot(ptcloud[:, :3], trfm_mat.T)
         return ptcloud

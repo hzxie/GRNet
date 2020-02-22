@@ -2,11 +2,10 @@
 # @Author: Haozhe Xie
 # @Date:   2019-09-06 11:35:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 10:38:05
+# @Last Modified time: 2020-02-22 19:20:36
 # @Email:  cshzxie@gmail.com
 
 import torch
-import torch.nn.functional as F
 
 from extensions.gridding import Gridding, GriddingReverse
 from extensions.cubic_feature_sampling import CubicFeatureSampling
@@ -18,7 +17,7 @@ class RandomPointSampling(torch.nn.Module):
         self.n_points = n_points
 
     def forward(self, pred_cloud, partial_cloud=None):
-        if not partial_cloud is None:
+        if partial_cloud is not None:
             pred_cloud = torch.cat([partial_cloud, pred_cloud], dim=1)
 
         _ptcloud = torch.split(pred_cloud, 1, dim=0)
@@ -158,4 +157,3 @@ class GRNet(torch.nn.Module):
         # print(dense_cloud.size())       # torch.Size([batch_size, 16384, 3])
 
         return sparse_cloud, dense_cloud
-

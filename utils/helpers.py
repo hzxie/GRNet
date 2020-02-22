@@ -2,10 +2,9 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2019-12-03 21:24:50
+# @Last Modified time: 2020-02-22 18:34:19
 # @Email:  cshzxie@gmail.com
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -42,7 +41,7 @@ def get_ptcloud_img(ptcloud):
     fig = plt.figure(figsize=(8, 8))
 
     x, z, y = ptcloud.transpose(1, 0)
-    ax = fig.gca(projection='3d', adjustable='box')
+    ax = fig.gca(projection=Axes3D.name, adjustable='box')
     ax.axis('off')
     ax.axis('scaled')
     ax.view_init(30, 45)
