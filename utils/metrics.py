@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-08-08 14:31:30
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 19:17:55
+# @Last Modified time: 2020-05-25 09:13:32
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -52,8 +52,8 @@ class Metrics(object):
         pred = cls._get_open3d_ptcloud(pred)
         gt = cls._get_open3d_ptcloud(gt)
 
-        dist1 = open3d.compute_point_cloud_to_point_cloud_distance(pred, gt)
-        dist2 = open3d.compute_point_cloud_to_point_cloud_distance(gt, pred)
+        dist1 = pred.compute_point_cloud_distance(gt)
+        dist2 = gt.compute_point_cloud_distance(pred)
 
         recall = float(sum(d < th for d in dist2)) / float(len(dist2))
         precision = float(sum(d < th for d in dist1)) / float(len(dist1))
@@ -62,8 +62,8 @@ class Metrics(object):
     @classmethod
     def _get_open3d_ptcloud(cls, tensor):
         tensor = tensor.squeeze().cpu().numpy()
-        ptcloud = open3d.PointCloud()
-        ptcloud.points = open3d.Vector3dVector(tensor)
+        ptcloud = open3d.geometry.PointCloud()
+        ptcloud.points = open3d.utility.Vector3dVector(tensor)
 
         return ptcloud
 
