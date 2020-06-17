@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-12-19 20:36:36
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-26 13:56:08
+ * @Last Modified time: 2020-06-17 14:55:41
  * @Email:  cshzxie@gmail.com
  */
 
@@ -121,8 +121,8 @@ std::vector<torch::Tensor> cubic_feature_sampling_cuda_forward(
   cubic_feature_sampling_kernel<<<batch_size, get_n_threads(n_pts), 0,
                                   stream>>>(
     scale, neighborhood_size, n_vertices, n_pts, n_cubic_channels,
-    ptcloud.data<float>(), cubic_features.data<float>(),
-    point_features.data<float>(), grid_pt_indexes.data<int>());
+    ptcloud.data_ptr<float>(), cubic_features.data_ptr<float>(),
+    point_features.data_ptr<float>(), grid_pt_indexes.data_ptr<int>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
@@ -193,8 +193,8 @@ std::vector<torch::Tensor> cubic_feature_sampling_cuda_backward(
   cubic_feature_sampling_grad_kernel<<<batch_size, get_n_threads(n_pts), 0,
                                        stream>>>(
     scale, neighborhood_size, n_vertices, n_pts, n_cubic_channels,
-    grad_point_features.data<float>(), grid_pt_indexes.data<int>(),
-    grad_ptcloud.data<float>(), grad_cubic_features.data<float>());
+    grad_point_features.data_ptr<float>(), grid_pt_indexes.data_ptr<int>(),
+    grad_ptcloud.data_ptr<float>(), grad_cubic_features.data_ptr<float>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {

@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-11-21 16:42:18
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-10 09:55:34
+ * @Last Modified time: 2020-06-17 15:00:21
  * @Email:  cshzxie@gmail.com
  */
 
@@ -112,7 +112,7 @@ torch::Tensor gridding_reverse_cuda_forward(int scale,
     torch::zeros({batch_size, n_pts, 3}, torch::CUDA(torch::kFloat));
 
   gridding_reverse_kernel<<<batch_size, get_n_threads(n_pts), 0, stream>>>(
-    scale, n_pts, grid.data<float>(), ptcloud.data<float>());
+    scale, n_pts, grid.data_ptr<float>(), ptcloud.data_ptr<float>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
@@ -225,8 +225,8 @@ torch::Tensor gridding_reverse_cuda_backward(torch::Tensor ptcloud,
     torch::zeros({batch_size, n_pts}, torch::CUDA(torch::kFloat));
 
   gridding_reverse_grad_kernel<<<batch_size, get_n_threads(n_pts), 0, stream>>>(
-    scale, n_pts, ptcloud.data<float>(), grid.data<float>(),
-    grad_ptcloud.data<float>(), grad_grid.data<float>());
+    scale, n_pts, ptcloud.data_ptr<float>(), grid.data_ptr<float>(),
+    grad_ptcloud.data_ptr<float>(), grad_grid.data_ptr<float>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {

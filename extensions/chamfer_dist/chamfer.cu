@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-08-07 20:54:24
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-10 10:42:07
+ * @Last Modified time: 2020-06-17 14:58:55
  * @Email:  cshzxie@gmail.com
  */
 
@@ -157,11 +157,11 @@ std::vector<torch::Tensor> chamfer_cuda_forward(torch::Tensor xyz1,
   torch::Tensor idx2 = torch::zeros({batch_size, m}, torch::CUDA(torch::kInt));
 
   chamfer_dist_kernel<<<dim3(32, 16, 1), 512>>>(
-    batch_size, n, xyz1.data<float>(), m, xyz2.data<float>(),
-    dist1.data<float>(), idx1.data<int>());
+    batch_size, n, xyz1.data_ptr<float>(), m, xyz2.data_ptr<float>(),
+    dist1.data_ptr<float>(), idx1.data_ptr<int>());
   chamfer_dist_kernel<<<dim3(32, 16, 1), 512>>>(
-    batch_size, m, xyz2.data<float>(), n, xyz1.data<float>(),
-    dist2.data<float>(), idx2.data<int>());
+    batch_size, m, xyz2.data_ptr<float>(), n, xyz1.data_ptr<float>(),
+    dist2.data_ptr<float>(), idx2.data_ptr<int>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
@@ -213,13 +213,13 @@ std::vector<torch::Tensor> chamfer_cuda_backward(torch::Tensor xyz1,
   torch::Tensor grad_xyz2 = torch::zeros_like(xyz2, torch::CUDA(torch::kFloat));
 
   chamfer_dist_grad_kernel<<<dim3(1, 16, 1), 256>>>(
-    batch_size, n, xyz1.data<float>(), m, xyz2.data<float>(),
-    grad_dist1.data<float>(), idx1.data<int>(), grad_xyz1.data<float>(),
-    grad_xyz2.data<float>());
+    batch_size, n, xyz1.data_ptr<float>(), m, xyz2.data_ptr<float>(),
+    grad_dist1.data_ptr<float>(), idx1.data_ptr<int>(),
+    grad_xyz1.data_ptr<float>(), grad_xyz2.data_ptr<float>());
   chamfer_dist_grad_kernel<<<dim3(1, 16, 1), 256>>>(
-    batch_size, m, xyz2.data<float>(), n, xyz1.data<float>(),
-    grad_dist2.data<float>(), idx2.data<int>(), grad_xyz2.data<float>(),
-    grad_xyz1.data<float>());
+    batch_size, m, xyz2.data_ptr<float>(), n, xyz1.data_ptr<float>(),
+    grad_dist2.data_ptr<float>(), idx2.data_ptr<int>(),
+    grad_xyz2.data_ptr<float>(), grad_xyz1.data_ptr<float>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {

@@ -2,7 +2,7 @@
  * @Author: Haozhe Xie
  * @Date:   2019-11-13 10:53:22
  * @Last Modified by:   Haozhe Xie
- * @Last Modified time: 2019-12-09 11:41:32
+ * @Last Modified time: 2020-06-17 15:00:10
  * @Email:  cshzxie@gmail.com
  */
 
@@ -200,8 +200,8 @@ std::vector<torch::Tensor> gridding_cuda_forward(float min_x,
 
   gridding_kernel<<<batch_size, get_n_threads(n_pts), 0, stream>>>(
     n_grid_vertices, n_pts, min_x, min_y, min_z, len_y, len_z,
-    ptcloud.data<float>(), grid_weights.data<float>(),
-    grid_pt_weights.data<float>(), grid_pt_indexes.data<int>());
+    ptcloud.data_ptr<float>(), grid_weights.data_ptr<float>(),
+    grid_pt_weights.data_ptr<float>(), grid_pt_indexes.data_ptr<int>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
@@ -323,9 +323,9 @@ torch::Tensor gridding_cuda_backward(torch::Tensor grid_pt_weights,
     torch::zeros({batch_size, n_pts, 3}, torch::CUDA(torch::kFloat));
 
   gridding_grad_kernel<<<batch_size, get_n_threads(n_pts), 0, stream>>>(
-    n_grid_vertices, n_pts, grid_pt_weights.data<float>(),
-    grid_pt_indexes.data<int>(), grad_grid.data<float>(),
-    grad_ptcloud.data<float>());
+    n_grid_vertices, n_pts, grid_pt_weights.data_ptr<float>(),
+    grid_pt_indexes.data_ptr<int>(), grad_grid.data_ptr<float>(),
+    grad_ptcloud.data_ptr<float>());
 
   cudaError_t err = cudaGetLastError();
   if (err != cudaSuccess) {
