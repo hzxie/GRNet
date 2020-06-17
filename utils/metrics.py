@@ -14,7 +14,7 @@ from extensions.chamfer_dist import ChamferDistance
 class Metrics(object):
     ITEMS = [{
         'name': 'F-Score',
-        'enabled': False,
+        'enabled': True,
         'eval_func': 'cls._get_f_score',
         'is_greater_better': True,
         'init_value': 0
