@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-02-22 19:29:26
+# @Last Modified time: 2020-07-03 08:50:07
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -79,7 +79,7 @@ def train_net(cfg):
     # Set up loss functions
     chamfer_dist = ChamferDistance()
     gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES,
-                                 alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)    # lgtm [py/unused-import]
+                                 alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)    # lgtm [py/unused-local-variable]
 
     # Load pretrained model if exists
     init_epoch = 0
@@ -92,7 +92,6 @@ def train_net(cfg):
         logging.info('Recover complete. Current epoch = #%d; best metrics = %s.' % (init_epoch, best_metrics))
 
     # Training/Testing the network
-    losses = AverageMeter()
     for epoch_idx in range(init_epoch + 1, cfg.TRAIN.N_EPOCHS + 1):
         epoch_start_time = time()
 
