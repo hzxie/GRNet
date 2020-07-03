@@ -2,7 +2,7 @@
 # @Author: Haozhe Xie
 # @Date:   2019-07-31 16:57:15
 # @Last Modified by:   Haozhe Xie
-# @Last Modified time: 2020-07-03 08:50:07
+# @Last Modified time: 2020-07-04 11:01:37
 # @Email:  cshzxie@gmail.com
 
 import logging
@@ -78,8 +78,9 @@ def train_net(cfg):
 
     # Set up loss functions
     chamfer_dist = ChamferDistance()
-    gridding_loss = GriddingLoss(scales=cfg.NETWORK.GRIDDING_LOSS_SCALES,
-                                 alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)    # lgtm [py/unused-local-variable]
+    gridding_loss = GriddingLoss(    # lgtm [py/unused-local-variable]
+        scales=cfg.NETWORK.GRIDDING_LOSS_SCALES,
+        alphas=cfg.NETWORK.GRIDDING_LOSS_ALPHAS)
 
     # Load pretrained model if exists
     init_epoch = 0

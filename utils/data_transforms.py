@@ -213,7 +213,7 @@ class RandomMirrorPoints(object):
         if rnd_value <= 0.25:
             trfm_mat = np.dot(trfm_mat_x, trfm_mat)
             trfm_mat = np.dot(trfm_mat_z, trfm_mat)
-        elif rnd_value > 0.25 and rnd_value <= 0.5:  # lgtm [py/redundant-comparison]
+        elif rnd_value > 0.25 and rnd_value <= 0.5:    # lgtm [py/redundant-comparison]
             trfm_mat = np.dot(trfm_mat_x, trfm_mat)
         elif rnd_value > 0.5 and rnd_value <= 0.75:
             trfm_mat = np.dot(trfm_mat_z, trfm_mat)

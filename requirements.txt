@@ -9,6 +9,6 @@ pprint
 pyexr
 scipy
 tensorboardX==1.2
-torch>=1.0.0
+torch>=1.4.0
 transforms3d
 tqdm
