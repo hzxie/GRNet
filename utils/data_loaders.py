@@ -89,6 +89,7 @@ class ShapeNetDataLoader(object):
         file_list = self._get_file_list(self.cfg, self._get_subset(subset), n_renderings)
         transforms = self._get_transforms(self.cfg, subset)
         return Dataset({
+            'n_renderings': n_renderings,
             'required_items': ['partial_cloud', 'gtcloud'],
             'shuffle': subset == DatasetSubset.TRAIN
         }, file_list, transforms)
