@@ -1,11 +1,10 @@
 argparse
 easydict
 h5py
-matplotlib
+matplotlib==3.0.3
 numpy
-open3d==0.10.0.0
+open3d==0.15.2
 opencv-python
-pprint
 pyexr
 scipy
 tensorboardX==1.2
