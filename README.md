@@ -2,7 +2,8 @@
 
 This repository contains the source code for the paper [GRNet: Gridding Residual Network for Dense Point Cloud Completion](https://arxiv.org/abs/2006.03761).
 
-[![codebeat badge](https://codebeat.co/badges/4e490a68-1a17-4274-a9f8-d7521458eb7f)](https://codebeat.co/projects/github-com-hzxie-grnet-master)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=hzxie_GRNet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=hzxie_GRNet)
+[![codefactor badge](https://www.codefactor.io/repository/github/hzxie/GRNet/badge)](https://www.codefactor.io/repository/github/hzxie/GRNet)
 
 ![Overview](https://www.infinitescript.com/projects/GRNet/GRNet-Overview.png)
 
