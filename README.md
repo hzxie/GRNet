@@ -5,7 +5,7 @@ This repository contains the source code for the paper [GRNet: Gridding Residual
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=hzxie_GRNet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=hzxie_GRNet)
 [![codefactor badge](https://www.codefactor.io/repository/github/hzxie/GRNet/badge)](https://www.codefactor.io/repository/github/hzxie/GRNet)
 
-![Overview](https://www.infinitescript.com/projects/GRNet/GRNet-Overview.png)
+![Overview](https://www.infinitescript.com/projects/GRNet/GRNet-Overview.webp)
 
 ## Cite this work
 
